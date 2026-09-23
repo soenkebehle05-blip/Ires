@@ -186,6 +186,7 @@
         if (preferredVoice) utter.voice = preferredVoice;
         utter.rate = 1.0;
         utter.pitch = 0.85;
+        text_speak.lang = 'de-DE';
         utter.onstart = () => setStatus('speaking');
         utter.onend = () => { stopWaveform(); setStatus('idle'); };
         utter.onerror = () => { stopWaveform(); setStatus('idle'); };
@@ -201,7 +202,7 @@
 
     if (SpeechRecognition) {
         recognizer = new SpeechRecognition();
-        recognizer.lang = 'en-US';
+        recognizer.lang = 'de-DE';
         recognizer.interimResults = false;
         recognizer.maxAlternatives = 1;
 
