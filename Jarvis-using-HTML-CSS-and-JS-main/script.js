@@ -1,10 +1,10 @@
 /* ==========================================================================
-   JARVIS — application logic
+   JARVIS — Anwendungslogik (Deutsch)
    ========================================================================== */
 (() => {
     'use strict';
 
-    /* ---------- element refs ---------- */
+    /* ---------- Element-Referenzen ---------- */
     const outputArea = document.getElementById('output-area');
     const inputField = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
@@ -24,7 +24,7 @@
     const readoutVoice = document.getElementById('readout-voice');
     const readoutMic = document.getElementById('readout-mic');
 
-    /* ---------- persistent state ---------- */
+    /* ---------- Permanenter Status ---------- */
     const store = {
         get notes() { try { return JSON.parse(localStorage.getItem('jarvis_notes') || '[]'); } catch { return []; } },
         set notes(v) { localStorage.setItem('jarvis_notes', JSON.stringify(v)); },
@@ -39,23 +39,23 @@
     const bootTime = Date.now();
 
     /* ==========================================================================
-       BOOT
+       STARTUP (BOOT)
        ========================================================================== */
     function boot() {
         if (store.theme === 'amber') document.body.classList.add('theme-amber');
-        readoutVoice.textContent = store.voiceOn ? 'ON' : 'OFF';
+        readoutVoice.textContent = store.voiceOn ? 'AN' : 'AUS';
         renderNotes();
         tickClock();
         setInterval(tickClock, 1000);
         setStatus('idle');
-        logActivity('System booted.');
+        logActivity('System gestartet.');
         initBattery();
     }
 
     function tickClock() {
         const now = new Date();
         clockEl.textContent = now.toLocaleTimeString([], { hour12: false });
-        readoutDate.textContent = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        readoutDate.textContent = now.toLocaleDateString('de-DE', { month: 'short', day: 'numeric', year: 'numeric' });
         const uptimeMs = Date.now() - bootTime;
         const s = Math.floor(uptimeMs / 1000) % 60;
         const m = Math.floor(uptimeMs / 60000) % 60;
@@ -79,7 +79,7 @@
     }
 
     /* ==========================================================================
-       STATUS / REACTOR STATE
+       STATUS / REAKTOR-STATUS
        ========================================================================== */
     function setStatus(state) {
         statusDot.className = 'status-dot';
@@ -92,23 +92,23 @@
                 break;
             case 'thinking':
                 statusDot.classList.add('busy');
-                statusLabel.textContent = 'PROCESSING';
+                statusLabel.textContent = 'VERARBEITUNG';
                 break;
             case 'listening':
                 statusDot.classList.add('listening');
-                statusLabel.textContent = 'LISTENING';
+                statusLabel.textContent = 'HÖRE ZU';
                 reactor.classList.add('listening');
-                readoutMic.textContent = 'LIVE';
+                readoutMic.textContent = 'AKTIV';
                 break;
             case 'speaking':
                 statusDot.classList.add('busy');
-                statusLabel.textContent = 'SPEAKING';
+                statusLabel.textContent = 'SPRICHT';
                 reactor.classList.add('speaking');
                 waveform.classList.add('active');
                 animateWaveform();
                 break;
         }
-        if (state !== 'listening') readoutMic.textContent = 'IDLE';
+        if (state !== 'listening') readoutMic.textContent = 'INAKTIV';
     }
 
     let waveformTimer = null;
@@ -126,7 +126,7 @@
     }
 
     /* ==========================================================================
-       LOGGING / NOTES
+       PROTOKOLLIERUNG / NOTIZEN
        ========================================================================== */
     function logActivity(text) {
         const li = document.createElement('li');
@@ -141,7 +141,7 @@
         notesCount.textContent = `(${notes.length})`;
         notesList.innerHTML = '';
         if (notes.length === 0) {
-            notesList.innerHTML = '<li class="notes-empty">No notes yet. Try "note: pick up dry cleaning".</li>';
+            notesList.innerHTML = '<li class="notes-empty">Keine Notizen vorhanden. Versuche "Notiz: Wäsche abholen".</li>';
             return;
         }
         notes.forEach((n, i) => {
@@ -150,12 +150,12 @@
             const del = document.createElement('span');
             del.className = 'note-del';
             del.textContent = '✕';
-            del.title = 'Delete note';
+            del.title = 'Notiz löschen';
             del.onclick = () => {
                 const updated = store.notes.filter((_, idx) => idx !== i);
                 store.notes = updated;
                 renderNotes();
-                logActivity('Note removed.');
+                logActivity('Notiz entfernt.');
             };
             li.appendChild(del);
             notesList.appendChild(li);
@@ -163,15 +163,15 @@
     }
 
     /* ==========================================================================
-       SPEECH SYNTHESIS (voice output)
+       SPRACHAUSGABE (Voice Output)
        ========================================================================== */
     let preferredVoice = null;
     function pickVoice() {
         const voices = speechSynthesis.getVoices();
         preferredVoice =
-            voices.find(v => /Daniel|Google UK English Male|Arthur|Alex/i.test(v.name)) ||
-            voices.find(v => /en-GB/i.test(v.lang) && /male/i.test(v.name)) ||
-            voices.find(v => /en/i.test(v.lang)) ||
+            voices.find(v => /Google Deutsch|Marlene|Vicki|Hans|de-DE/i.test(v.name)) ||
+            voices.find(v => /de-DE/i.test(v.lang)) ||
+            voices.find(v => /de/i.test(v.lang)) ||
             voices[0] || null;
     }
     if ('speechSynthesis' in window) {
@@ -184,6 +184,7 @@
         speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         if (preferredVoice) utter.voice = preferredVoice;
+        utter.lang = 'de-DE';
         utter.rate = 1.0;
         utter.pitch = 0.85;
         utter.onstart = () => setStatus('speaking');
@@ -193,7 +194,7 @@
     }
 
     /* ==========================================================================
-       SPEECH RECOGNITION (voice input)
+       SPRACHERKENNUNG (Voice Input)
        ========================================================================== */
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognizer = null;
@@ -206,7 +207,7 @@
         recognizer.maxAlternatives = 1;
 
         recognizer.onstart = () => { isRecording = true; micBtn.classList.add('recording'); setStatus('listening'); };
-        recognizer.onend = () => { isRecording = false; micBtn.classList.remove('recording'); if (statusLabel.textContent === 'LISTENING') setStatus('idle'); };
+        recognizer.onend = () => { isRecording = false; micBtn.classList.remove('recording'); if (statusLabel.textContent === 'HÖRE ZU') setStatus('idle'); };
         recognizer.onerror = () => { isRecording = false; micBtn.classList.remove('recording'); setStatus('idle'); };
         recognizer.onresult = (e) => {
             const transcript = e.results[0][0].transcript;
@@ -215,7 +216,7 @@
         };
     } else {
         micBtn.disabled = true;
-        micBtn.title = 'Voice input not supported in this browser';
+        micBtn.title = 'Spracheingabe wird von diesem Browser nicht unterstützt';
         micBtn.style.opacity = 0.35;
     }
 
@@ -225,24 +226,24 @@
     });
 
     /* ==========================================================================
-       OPTIONAL LOCAL AUDIO CUES (best-effort — silently ignored if missing)
+       OPTIONALE LOKALE AUDIO-EFFEKTE
        ========================================================================== */
     function tryPlayLocal(id) {
         const el = document.getElementById(id);
         if (!el) return false;
         el.currentTime = 0;
         const p = el.play();
-        if (p && p.catch) p.catch(() => { }); // ignore missing-file / autoplay errors
+        if (p && p.catch) p.catch(() => { });
         return true;
     }
 
     /* ==========================================================================
-       TYPEWRITER OUTPUT
+       SCHREIBMASCHINEN-AUSGABE
        ========================================================================== */
     function printUser(text) {
         const div = document.createElement('div');
         div.className = 'user-command';
-        div.innerHTML = `<strong>You</strong>${escapeHtml(text)}`;
+        div.innerHTML = `<strong>Du</strong>${escapeHtml(text)}`;
         outputArea.appendChild(div);
         scrollToBottom();
     }
@@ -277,14 +278,14 @@
     }
 
     /* ==========================================================================
-       COMMAND DEFINITIONS
+       BEFEHLSDEFINITIONEN (Auf Deutsch)
        ========================================================================== */
     const jokes = [
-        "Why don't scientists trust atoms? Because they make up everything.",
-        "I would tell you a UDP joke, but you might not get it.",
-        "There are 10 types of people: those who understand binary, and those who don't.",
-        "Why do programmers prefer dark mode? Because light attracts bugs.",
-        "I've got a great joke about arc reactors, but it needs more power.",
+        "Warum können Atomphysiker nicht lügen? Weil sie alles erfinden.",
+        "Ich würde dir einen UDP-Witz erzählen, aber es könnte sein, dass er nicht bei dir ankommt.",
+        "Es gibt 10 Arten von Menschen: Diejenigen, die Binärzahlen verstehen, und die, die es nicht tun.",
+        "Warum bevorzugen Programmierer den Dark Mode? Weil Licht Bugs anzieht.",
+        "Ich kenne einen tollen Witz über Bogenreaktoren, aber er braucht noch etwas mehr Energie.",
     ];
 
     function safeEval(expr) {
@@ -299,184 +300,184 @@
 
     async function fetchWeather(place) {
         try {
-            const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1`);
+            const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1&language=de`);
             const geo = await geoRes.json();
-            if (!geo.results || !geo.results.length) return `I couldn't find a location called "${place}", sir.`;
+            if (!geo.results || !geo.results.length) return `Ich konnte keinen Ort namens "${place}" finden.`;
             const { latitude, longitude, name, country } = geo.results[0];
             const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m,relative_humidity_2m`);
             const w = await wRes.json();
             const c = w.current;
-            if (!c) return `I retrieved coordinates for ${name}, but the forecast service didn't respond, sir.`;
-            return `Currently in ${name}, ${country}: ${c.temperature_2m}°C, humidity ${c.relative_humidity_2m}%, wind ${c.wind_speed_10m} km/h.`;
+            if (!c) return `Ich habe Koordinaten für ${name} gefunden, aber der Wetterdienst hat nicht geantwortet.`;
+            return `Aktuell in ${name}, ${country}: ${c.temperature_2m}°C, Luftfeuchtigkeit ${c.relative_humidity_2m}%, Windgeschwindigkeit ${c.wind_speed_10m} km/h.`;
         } catch {
-            return "I couldn't reach the weather service — check the connection, sir.";
+            return "Ich konnte den Wetterdienst nicht erreichen — bitte überprüfe die Verbindung.";
         }
     }
 
     function greetingByTime() {
         const h = new Date().getHours();
-        if (h < 5) return 'burning the midnight oil, sir';
-        if (h < 12) return 'good morning, sir';
-        if (h < 17) return 'good afternoon, sir';
-        if (h < 21) return 'good evening, sir';
-        return 'still up, sir';
+        if (h < 5) return 'Nachtarbeit?';
+        if (h < 12) return 'Guten Morgen.';
+        if (h < 17) return 'Guten Tag.';
+        if (h < 21) return 'Guten Abend.';
+        return 'Noch wach?';
     }
 
-    /* Each rule: { test: (lowerInput) => bool, run: (raw, lower) => string | Promise<string> } */
+    /* Regelstruktur: { test: (lowerInput) => bool, run: (raw, lower) => string | Promise<string> } */
     const rules = [
         {
-            test: l => /\bi'?m back\b|^i am back/.test(l),
-            run: () => "Welcome back, sir. Systems are already spun up — feel free to grab a coffee while I finish the last checks.",
+            test: l => /\bich bin zurück\b|^bin wieder da/.test(l),
+            run: () => "Willkommen zurück. Die Systeme laufen bereit — wie kann ich helfen?",
         },
         {
-            test: l => /^hey\b|^hi\b|^hello\b/.test(l),
-            run: () => `At your service — ${greetingByTime()}.`,
+            test: l => /^hallo\b|^hi\b|^hey\b|^servus\b|^moin\b/.test(l),
+            run: () => `Zu Diensten — ${greetingByTime()}`,
         },
         {
-            test: l => l.includes('introduce yourself') || l.includes('who are you'),
-            run: () => "I am JARVIS — a virtual assistant here to help with information, quick calculations, notes, reminders, and a bit of conversation. All systems operational.",
+            test: l => l.includes('stelle dich vor') || l.includes('wer bist du'),
+            run: () => "Ich bin JARVIS — ein virtueller Assistent, der dir bei Informationen, schnellen Berechnungen, Notizen, Erinnerungen und Gesprächen hilft. Alle Systeme sind betriebsbereit.",
         },
         {
-            test: l => l.includes('battery'),
+            test: l => l.includes('akku') || l.includes('batterie'),
             run: () => readoutBattery.textContent && readoutBattery.textContent !== '—'
-                ? `Current battery level is ${readoutBattery.textContent}.`
-                : "I can't read battery data on this device, sir.",
+                ? `Der aktuelle Akkustand beträgt ${readoutBattery.textContent}.`
+                : "Ich kann auf diesem Gerät keine Akkudaten auslesen.",
             cueId: 'Batterylow',
         },
         {
-            test: l => /^weather|weather (in|for)/.test(l),
+            test: l => /^wetter|wetter (in|für)/.test(l),
             run: async (raw, l) => {
-                const match = raw.match(/weather (?:in|for)\s+(.+)/i);
+                const match = raw.match(/wetter (?:in|für)\s+(.+)/i);
                 const place = match ? match[1].trim() : null;
-                if (!place) return "Tell me a city — for example, 'weather in Lahore'.";
+                if (!place) return "Nenne mir eine Stadt — zum Beispiel 'Wetter in Berlin'.";
                 return await fetchWeather(place);
             },
         },
         {
-            test: l => l.includes('what time') || l === 'time' || l.includes("what's the time"),
-            run: () => `The current time is ${new Date().toLocaleTimeString()}.`,
+            test: l => l.includes('wie viel uhr') || l.includes('wie spät') || l === 'uhrzeit' || l === 'zeit',
+            run: () => `Es ist jetzt ${new Date().toLocaleTimeString('de-DE')} Uhr.`,
         },
         {
-            test: l => l.includes('date') && !l.includes('update'),
-            run: () => `Today's date is ${new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`,
+            test: l => l.includes('datum') && !l.includes('update'),
+            run: () => `Heute ist ${new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`,
         },
         {
-            test: l => /^calculate|^calc\b|^what is [\d.]/.test(l),
+            test: l => /^berechne|^rechne|^was ist [\d.]/.test(l),
             run: (raw) => {
-                const expr = raw.replace(/^calculate|^calc\b|^what is/i, '').trim();
+                const expr = raw.replace(/^berechne|^rechne|^was ist/i, '').trim();
                 const result = safeEval(expr);
-                return result === null ? "I couldn't evaluate that expression, sir." : `${expr} = ${result}`;
+                return result === null ? "Ich konnte diesen Ausdruck nicht berechnen." : `${expr} = ${result}`;
             },
         },
         {
-            test: l => l.startsWith('note:') || l.startsWith('note to self:') || l.startsWith('remember'),
+            test: l => l.startsWith('notiz:') || l.startsWith('notiz an mich:') || l.startsWith('merke'),
             run: (raw) => {
-                const content = raw.replace(/^note to self:|^note:|^remember (that )?/i, '').trim();
-                if (!content) return "What would you like me to note, sir?";
+                const content = raw.replace(/^notiz an mich:|^notiz:|^merke (dir )?/i, '').trim();
+                if (!content) return "Was soll ich für dich notieren?";
                 const notes = store.notes;
                 notes.push(content);
                 store.notes = notes;
                 renderNotes();
-                logActivity('Note saved.');
-                return `Noted: "${content}".`;
+                logActivity('Notiz gespeichert.');
+                return `Notiert: "${content}".`;
             },
         },
         {
-            test: l => l.includes('show notes') || l === 'notes',
+            test: l => l.includes('zeige notizen') || l.includes('notizen anzeigen') || l === 'notizen',
             run: () => {
                 const notes = store.notes;
-                if (!notes.length) return "You have no notes saved, sir.";
-                return `You have ${notes.length} note${notes.length > 1 ? 's' : ''}:\n${notes.map((n, i) => `${i + 1}. ${n}`).join('\n')}`;
+                if (!notes.length) return "Du hast keine gespeicherten Notizen.";
+                return `Du hast ${notes.length} Notiz${notes.length > 1 ? 'en' : ''}:\n${notes.map((n, i) => `${i + 1}.${n}`).join('\n')}`;
             },
         },
         {
-            test: l => l.includes('clear notes'),
-            run: () => { store.notes = []; renderNotes(); logActivity('Notes cleared.'); return "All notes cleared, sir."; },
+            test: l => l.includes('notizen löschen') || l.includes('alle notizen löschen'),
+            run: () => { store.notes = []; renderNotes(); logActivity('Notizen gelöscht.'); return "Alle Notizen wurden gelöscht."; },
         },
         {
-            test: l => /set (a )?timer for/.test(l),
+            test: l => /stelle (einen )?timer auf/.test(l) || /timer für/.test(l),
             run: (raw) => {
-                const m = raw.match(/(\d+)\s*(second|minute|hour)/i);
-                if (!m) return "Tell me a duration — for example, 'set a timer for 5 minutes'.";
+                const m = raw.match(/(\d+)\s*(sekunde|sekunden|minute|minuten|stunde|stunden)/i);
+                if (!m) return "Gib eine Dauer an — zum Beispiel 'Stelle einen Timer auf 5 Minuten'.";
                 const n = parseInt(m[1], 10);
                 const unit = m[2].toLowerCase();
-                const ms = unit.startsWith('hour') ? n * 3600000 : unit.startsWith('minute') ? n * 60000 : n * 1000;
+                const ms = unit.startsWith('stunde') ? n * 3600000 : unit.startsWith('minute') ? n * 60000 : n * 1000;
                 setTimeout(() => {
-                    printJarvis(`Timer complete — ${n} ${unit}${n > 1 ? 's' : ''} have elapsed, sir.`);
-                    logActivity('Timer finished.');
+                    printJarvis(`Timer abgelaufen — ${n} ${unit} sind vergangen.`);
+                    logActivity('Timer beendet.');
                 }, ms);
-                logActivity(`Timer set: ${n} ${unit}(s).`);
-                return `Timer set for ${n} ${unit}${n > 1 ? 's' : ''}, sir. I'll let you know.`;
+                logActivity(`Timer gestellt: ${n} ${unit}.`);
+                return `Timer auf ${n} ${unit} gestellt. Ich gebe Bescheid.`;
             },
         },
         {
-            test: l => l.includes('reboot') || l.includes('restart'),
-            run: () => { setTimeout(() => location.reload(), 1800); return "Rebooting interface — see you in a moment, sir."; },
+            test: l => l.includes('neu starten') || l.includes('neustart') || l.includes('reboot'),
+            run: () => { setTimeout(() => location.reload(), 1800); return "Schnittstelle wird neu gestartet — bis gleich."; },
             cueId: 'reboot',
         },
         {
-            test: l => l.includes('shutdown') || l.includes('shut down') || l.includes('goodbye') || l.includes('go to sleep'),
-            run: () => { document.body.style.transition = 'opacity 1.5s ease'; setTimeout(() => document.body.style.opacity = '0.15', 400); return "Shutting down non-essential systems. Goodbye, sir."; },
+            test: l => l.includes('herunterfahren') || l.includes('ausschalten') || l.includes('tschüss') || l.includes('gute nacht'),
+            run: () => { document.body.style.transition = 'opacity 1.5s ease'; setTimeout(() => document.body.style.opacity = '0.15', 400); return "Nicht essenzielle Systeme werden heruntergefahren. Auf Wiedersehen."; },
         },
         {
-            test: l => l.includes('clear') && (l.includes('screen') || l.includes('output') || l === 'clear'),
-            run: () => { outputArea.innerHTML = ''; return "Display cleared."; },
+            test: l => l.includes('leeren') || l.includes('bildschirm leeren') || l === 'clear' || l === 'löschen',
+            run: () => { outputArea.innerHTML = ''; return "Anzeige geleert."; },
         },
         {
-            test: l => l.includes('open music'),
-            run: () => { window.open('https://open.spotify.com', '_blank'); return "Opening your music player, sir."; },
+            test: l => l.includes('musik öffnen') || l.includes('spiele musik'),
+            run: () => { window.open('https://open.spotify.com', '_blank'); return "Öffne den Musikplayer."; },
         },
         {
-            test: l => l.startsWith('search'),
+            test: l => l.startsWith('suche') || l.startsWith('suche nach'),
             run: (raw) => {
-                const q = raw.replace(/^search( for)?/i, '').trim();
-                if (!q) return "What would you like me to search for, sir?";
+                const q = raw.replace(/^suche( nach)?/i, '').trim();
+                if (!q) return "Wonach soll ich suchen?";
                 window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank');
-                return `Searching for "${q}", sir.`;
+                return `Suche nach "${q}".`;
             },
         },
         {
-            test: l => l.includes('play game'),
-            run: () => "Launching a quick diversion — try asking me for 'a joke' while I warm things up. Full game integration coming soon, sir.",
+            test: l => l.includes('spiel spielen') || l.includes('spiel starten'),
+            run: () => "Startverlauf vorbereitet — frag mich doch in der Zwischenzeit nach einem 'Witz'. Die vollständige Spielintegration folgt in Kürze.",
         },
         {
-            test: l => l === 'help' || l.includes('what can you do'),
-            run: () => "I can handle: time · date · weather in <city> · calculate <expression> · note: <text> · show notes · set a timer for <n> minutes · joke · battery · search <query> · reboot · shutdown · clear. Speak or type any of these.",
+            test: l => l === 'hilfe' || l.includes('was kannst du'),
+            run: () => "Ich beherrsche: Uhrzeit · Datum · Wetter in <Stadt> · berechne <Ausdruck> · Notiz: <Text> · Notizen anzeigen · Timer auf <n> Minuten · Witz · Akku · Suche <Begriff> · Neustart · Herunterfahren · Leeren. Sprich oder tippe einen dieser Befehle.",
         },
         {
-            test: l => l.includes('news'),
-            run: () => { window.open('https://news.google.com', '_blank'); return "Opening the latest headlines, sir."; },
+            test: l => l.includes('nachrichten') || l.includes('news'),
+            run: () => { window.open('https://news.google.com', '_blank'); return "Öffne die aktuellen Schlagzeilen."; },
         },
         {
-            test: l => l.includes('settings'),
-            run: () => "Use the ◐ icon in the top-right to switch the interface palette. More settings are on the way, sir.",
+            test: l => l.includes('einstellungen') || l.includes('settings'),
+            run: () => "Verwende das ◐-Symbol oben rechts, um das Farbschema zu wechseln. Weitere Einstellungen folgen bald.",
         },
         {
-            test: l => l.includes('joke'),
+            test: l => l.includes('witz'),
             run: () => jokes[Math.floor(Math.random() * jokes.length)],
         },
         {
-            test: l => l.includes('mute') || l.includes('voice off'),
-            run: () => { store.voiceOn = false; readoutVoice.textContent = 'OFF'; return "Voice output disabled."; },
+            test: l => l.includes('stummschalten') || l.includes('ton aus') || l.includes('stimme aus'),
+            run: () => { store.voiceOn = false; readoutVoice.textContent = 'AUS'; return "Sprachausgabe deaktiviert."; },
         },
         {
-            test: l => l.includes('unmute') || l.includes('voice on'),
-            run: () => { store.voiceOn = true; readoutVoice.textContent = 'ON'; return "Voice output enabled."; },
+            test: l => l.includes('ton an') || l.includes('stimme an') || l.includes('lautschalten'),
+            run: () => { store.voiceOn = true; readoutVoice.textContent = 'AN'; return "Sprachausgabe aktiviert."; },
         },
         {
-            test: l => l.includes('thank'),
-            run: () => "Always a pleasure, sir.",
+            test: l => l.includes('danke') || l.includes('vielen dank'),
+            run: () => "Jederzeit gerne.",
         },
     ];
 
     const fallbacks = [
-        "I'm not certain I follow — try 'help' to see what I can do.",
-        "That one's outside my current parameters, sir. Type 'help' for a list of commands.",
-        "I didn't quite catch a valid command there.",
+        "Ich bin mir nicht sicher, ob ich das verstanden habe — versuche 'Hilfe' einzugeben.",
+        "Das liegt außerhalb meiner aktuellen Parameter. Tippe 'Hilfe' für eine Liste der Befehle.",
+        "Das habe ich leider nicht als gültigen Befehl erkannt.",
     ];
 
     /* ==========================================================================
-       SUBMIT HANDLER
+       SUBMIT-HANDLING
        ========================================================================== */
     async function handleSubmit() {
         const raw = inputField.value.trim();
@@ -492,24 +493,24 @@
         const lower = raw.toLowerCase();
         const matched = rules.find(r => r.test(lower));
 
-        await new Promise(res => setTimeout(res, 220)); // brief "thinking" beat
+        await new Promise(res => setTimeout(res, 220)); // kurze Denkpause
 
         let response;
         let cueId = null;
         if (matched) {
             response = await matched.run(raw, lower);
             cueId = matched.cueId || null;
-            logActivity(`Command: "${raw.slice(0, 40)}"`);
+            logActivity(`Befehl: "${raw.slice(0, 40)}"`);
         } else {
             response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-            logActivity(`Unrecognized: "${raw.slice(0, 40)}"`);
+            logActivity(`Nicht erkannt: "${raw.slice(0, 40)}"`);
         }
 
         printJarvis(response, { cueId });
     }
 
     /* ==========================================================================
-       EVENTS
+       EVENT LISTENER
        ========================================================================== */
     sendBtn.addEventListener('click', handleSubmit);
     inputField.addEventListener('keydown', (e) => {
