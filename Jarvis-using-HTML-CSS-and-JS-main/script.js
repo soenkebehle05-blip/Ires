@@ -186,7 +186,6 @@
         if (preferredVoice) utter.voice = preferredVoice;
         utter.rate = 1.0;
         utter.pitch = 0.85;
-        text_speak.lang = 'de-DE';
         utter.onstart = () => setStatus('speaking');
         utter.onend = () => { stopWaveform(); setStatus('idle'); };
         utter.onerror = () => { stopWaveform(); setStatus('idle'); };
