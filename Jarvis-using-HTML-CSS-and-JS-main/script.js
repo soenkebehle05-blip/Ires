@@ -1,5 +1,5 @@
 /* ==========================================================================
-   I.R.E.S. — Anwendungslogik
+   I.R.E.S. — Anwendungslogik mit Benutzerverwaltung & Langzeitgedächtnis
    ========================================================================== */
 (() => {
     'use strict';
@@ -24,14 +24,38 @@
     const readoutVoice = document.getElementById('readout-voice');
     const readoutMic = document.getElementById('readout-mic');
 
-    /* ---------- Permanenter Status ---------- */
+    /* ---------- Benutzersystem & Speicher (LocalStorage) ---------- */
+    let currentUser = localStorage.getItem('ires_active_user') || null;
+
     const store = {
-        get notes() { try { return JSON.parse(localStorage.getItem('ires_notes') || '[]'); } catch { return []; } },
-        set notes(v) { localStorage.setItem('ires_notes', JSON.stringify(v)); },
+        // Allgemeine Einstellungen
         get voiceOn() { return localStorage.getItem('ires_voice') !== 'off'; },
         set voiceOn(v) { localStorage.setItem('ires_voice', v ? 'on' : 'off'); },
         get theme() { return localStorage.getItem('ires_theme') || 'cyan'; },
         set theme(v) { localStorage.setItem('ires_theme', v); },
+
+        // Benutzerspezifische Daten
+        get notes() {
+            if (!currentUser) return [];
+            try { return JSON.parse(localStorage.getItem(`ires_notes_${currentUser}`) || '[]'); } catch { return []; }
+        },
+        set notes(v) {
+            if (currentUser) localStorage.setItem(`ires_notes_${currentUser}`, JSON.stringify(v));
+        },
+        get chatHistory() {
+            if (!currentUser) return [];
+            try { return JSON.parse(localStorage.getItem(`ires_chat_${currentUser}`) || '[]'); } catch { return []; }
+        },
+        set chatHistory(v) {
+            if (currentUser) localStorage.setItem(`ires_chat_${currentUser}`, JSON.stringify(v));
+        },
+        get memory() {
+            if (!currentUser) return {};
+            try { return JSON.parse(localStorage.getItem(`ires_memory_${currentUser}`) || '{}'); } catch { return {}; }
+        },
+        set memory(v) {
+            if (currentUser) localStorage.setItem(`ires_memory_${currentUser}`, JSON.stringify(v));
+        }
     };
 
     let history = [];
@@ -39,17 +63,92 @@
     const bootTime = Date.now();
 
     /* ==========================================================================
+       AUTHENTIFIZIERUNG / USER-MANAGEMENT
+       ========================================================================== */
+    function getUsersDB() {
+        try { return JSON.parse(localStorage.getItem('ires_users_db') || '{}'); } catch { return {}; }
+    }
+
+    function saveUsersDB(db) {
+        localStorage.setItem('ires_users_db', JSON.stringify(db));
+    }
+
+    function registerUser(username, password) {
+        const db = getUsersDB();
+        if (db[username.toLowerCase()]) {
+            return { success: false, msg: 'Benutzername existiert bereits, Sir.' };
+        }
+        db[username.toLowerCase()] = { username, password }; // Im echten Betrieb verhashen
+        saveUsersDB(db);
+        return { success: true, msg: 'Konto erfolgreich angelegt.' };
+    }
+
+    function loginUser(username, password) {
+        const db = getUsersDB();
+        const user = db[username.toLowerCase()];
+        if (!user || user.password !== password) {
+            return { success: false, msg: 'Zugangsdaten ungültig, Sir.' };
+        }
+        currentUser = user.username;
+        localStorage.setItem('ires_active_user', currentUser);
+        return { success: true, msg: `Willkommen zurück, ${currentUser}.` };
+    }
+
+    function logoutUser() {
+        currentUser = null;
+        localStorage.removeItem('ires_active_user');
+        outputArea.innerHTML = '';
+        renderNotes();
+        logActivity('Benutzer abgemeldet.');
+        printIres("Sie wurden abgemeldet, Sir. Bitte melden Sie sich mit 'Anmelden [Name] [Passwort]' an.", { speakToo: false });
+    }
+
+    function loadSavedChat() {
+        outputArea.innerHTML = '';
+        const saved = store.chatHistory;
+        if (saved.length === 0) {
+            printIres(`I.R.E.S. Schnittstelle bereit. Angemeldet als **${currentUser}**. Wie kann ich helfen, Sir?`, { speakToo: false });
+        } else {
+            saved.forEach(msg => {
+                if (msg.sender === 'user') {
+                    printUserUI(msg.text);
+                } else {
+                    printIresUI(msg.text);
+                }
+            });
+            scrollToBottom();
+        }
+    }
+
+    function saveMessage(sender, text) {
+        if (!currentUser) return;
+        const current = store.chatHistory;
+        current.push({ sender, text, time: new Date().toISOString() });
+        // Maximal 100 Nachrichten pro Chat speichern
+        if (current.length > 100) current.shift();
+        store.chatHistory = current;
+    }
+
+    /* ==========================================================================
        STARTUP (BOOT)
        ========================================================================== */
     function boot() {
         if (store.theme === 'amber') document.body.classList.add('theme-amber');
         readoutVoice.textContent = store.voiceOn ? 'AN' : 'AUS';
-        renderNotes();
         tickClock();
         setInterval(tickClock, 1000);
         setStatus('idle');
-        logActivity('I.R.E.S. Systeme online.');
         initBattery();
+
+        if (currentUser) {
+            logActivity(`Benutzer '${currentUser}' authentifiziert.`);
+            renderNotes();
+            loadSavedChat();
+        } else {
+            logActivity('I.R.E.S. Bereit. Nicht angemeldet.');
+            renderNotes();
+            printIres("Willkommen bei I.R.E.S. Bitte melden Sie sich an oder registrieren Sie sich.\nBefehle: `Registrieren [Name] [Passwort]` oder `Anmelden [Name] [Passwort]`", { speakToo: false });
+        }
     }
 
     function tickClock() {
@@ -67,7 +166,7 @@
         if (navigator.getBattery) {
             navigator.getBattery().then(bat => {
                 const update = () => {
-                    readoutBattery.textContent = `${Math.round(bat.level * 100)}%${bat.charging ? ' ⚡' : ''}`;
+                    readoutBattery.textContent = `${Math.round(bat.level * 100)}\%${bat.charging ? ' ⚡' : ''}`;
                 };
                 update();
                 bat.addEventListener('levelchange', update);
@@ -88,7 +187,7 @@
         switch (state) {
             case 'idle':
                 statusDot.classList.add('on');
-                statusLabel.textContent = 'ONLINE';
+                statusLabel.textContent = currentUser ? currentUser.toUpperCase() : 'ONLINE';
                 break;
             case 'thinking':
                 statusDot.classList.add('busy');
@@ -131,12 +230,17 @@
     function logActivity(text) {
         const li = document.createElement('li');
         const t = new Date().toLocaleTimeString([], { hour12: false });
-        li.innerHTML = `<b>${t}</b> — ${text}`;
+        li.innerHTML = `<b>${t}</b> —${text}`;
         activityLog.insertBefore(li, activityLog.firstChild);
         while (activityLog.children.length > 8) activityLog.removeChild(activityLog.lastChild);
     }
 
     function renderNotes() {
+        if (!currentUser) {
+            notesCount.textContent = `(0)`;
+            notesList.innerHTML = '<li class="notes-empty">Bitte anmelden, um Notizen zu sehen.</li>';
+            return;
+        }
         const notes = store.notes;
         notesCount.textContent = `(${notes.length})`;
         notesList.innerHTML = '';
@@ -182,7 +286,9 @@
     function speak(text) {
         if (!store.voiceOn || !('speechSynthesis' in window)) return;
         speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
+        // Markdown-Zeichen für die Sprachausgabe entfernen
+        const cleanText = text.replace(/[*_#`]/g, '');
+        const utter = new SpeechSynthesisUtterance(cleanText);
         if (preferredVoice) utter.voice = preferredVoice;
         utter.lang = 'de-DE';
         utter.rate = 1.0;
@@ -225,9 +331,6 @@
         if (isRecording) { recognizer.stop(); } else { try { recognizer.start(); } catch (_) { } }
     });
 
-    /* ==========================================================================
-       OPTIONALE LOKALE AUDIO-EFFEKTE
-       ========================================================================== */
     function tryPlayLocal(id) {
         const el = document.getElementById(id);
         if (!el) return false;
@@ -238,17 +341,30 @@
     }
 
     /* ==========================================================================
-       SCHREIBMASCHINEN-AUSGABE
+       INTERFACE AUSGABE (UI-HELFER)
        ========================================================================== */
-    function printUser(text) {
+    function printUserUI(text) {
         const div = document.createElement('div');
         div.className = 'user-command';
-        div.innerHTML = `<strong>Sie</strong>${escapeHtml(text)}`;
+        div.innerHTML = `<strong>${currentUser || 'Sie'}</strong>${escapeHtml(text)}`;
         outputArea.appendChild(div);
+    }
+
+    function printIresUI(text) {
+        const div = document.createElement('div');
+        div.className = 'jarvis-response';
+        div.textContent = text;
+        outputArea.appendChild(div);
+    }
+
+    function printUser(text) {
+        printUserUI(text);
+        saveMessage('user', text);
         scrollToBottom();
     }
 
     function printIres(text, { speakToo = true, cueId = null } = {}) {
+        saveMessage('ires', text);
         const div = document.createElement('div');
         div.className = 'jarvis-response';
         outputArea.appendChild(div);
@@ -278,7 +394,7 @@
     }
 
     /* ==========================================================================
-       BEFEHLSDEFINITIONEN (I.R.E.S.-Stil)
+       BEFEHLSDEFINITIONEN & LANGZEITGEDÄCHTNIS
        ========================================================================== */
     const jokes = [
         "Warum können Atomphysiker nicht lügen? Weil sie alles erfinden, Sir.",
@@ -316,18 +432,128 @@
 
     function greetingByTime() {
         const h = new Date().getHours();
-        if (h < 5) return 'Wieder eine Nachtschicht, Sir?';
-        if (h < 12) return 'Guten Morgen, Sir. Alle Systeme arbeiten im optimalen Bereich.';
-        if (h < 17) return 'Guten Tag, Sir. Wie kann ich behilflich sein?';
-        if (h < 21) return 'Guten Abend, Sir. Bereit für die nächsten Befehle.';
-        return 'Noch so spät aktiv, Sir?';
+        const userStr = currentUser ? `, ${currentUser}` : '';
+        if (h < 5) return `Wieder eine Nachtschicht${userStr}?`;
+        if (h < 12) return `Guten Morgen${userStr}. Alle Systeme arbeiten im optimalen Bereich.`;
+        if (h < 17) return `Guten Tag${userStr}. Wie kann ich behilflich sein?`;
+        if (h < 21) return `Guten Abend${userStr}. Bereit für die nächsten Befehle.`;
+        return `Noch so spät aktiv${userStr}?`;
     }
 
     /* Regelstruktur: { test: (lowerInput) => bool, run: (raw, lower) => string | Promise<string> } */
     const rules = [
+        /* --- AUTHENTIFIZIERUNG --- */
+        {
+            test: l => /^registrieren\b|^register\b/.test(l),
+            run: (raw) => {
+                const parts = raw.split(/\s+/);
+                if (parts.length < 3) return "Syntax: Registrieren [Benutzername] [Passwort]";
+                const res = registerUser(parts[1], parts[2]);
+                if (res.success) {
+                    loginUser(parts[1], parts[2]);
+                    renderNotes();
+                    loadSavedChat();
+                    return `Registrierung erfolgreich. Sie sind nun als ${currentUser} angemeldet.`;
+                }
+                return res.msg;
+            }
+        },
+        {
+            test: l => /^anmelden\b|^login\b/.test(l),
+            run: (raw) => {
+                const parts = raw.split(/\s+/);
+                if (parts.length < 3) return "Syntax: Anmelden [Benutzername] [Passwort]";
+                const res = loginUser(parts[1], parts[2]);
+                if (res.success) {
+                    renderNotes();
+                    loadSavedChat();
+                    return `Erfolgreich angemeldet. Willkommen zurück, ${currentUser}, Sir!`;
+                }
+                return res.msg;
+            }
+        },
+        {
+            test: l => l === 'abmelden' || l === 'logout',
+            run: () => {
+                logoutUser();
+                return "Sie wurden erfolgreich abgemeldet, Sir.";
+            }
+        },
+
+        /* --- LANGZEITGEDÄCHTNIS (Lernen & Abfragen) --- */
+        {
+            // Merken: "Merke dir: Mein Hund heißt Bello" ODER "Ich heiße Max" ODER "Meine Lieblingsfarbe ist Blau"
+            test: l => /^merke dir:?|^merke:?|^vermerke:?|^erinnere dich:?/.test(l) || /^mein(e)? \w+ ist/.test(l) || /^ich heiße/.test(l),
+            run: (raw, l) => {
+                if (!currentUser) return "Sie müssen angemeldet sein, damit ich mir persönliche Daten merken kann, Sir.";
+                let fact = raw.replace(/^merke dir:?|^merke:?|^vermerke:?|^erinnere dich:?/i, '').trim();
+                
+                let key = "allgemein";
+                let value = fact;
+
+                // Intelligente Zuordnung versuchen
+                if (l.includes('heiß') || l.includes('name')) {
+                    key = "name";
+                    value = raw.replace(/.*(?:heiße|name ist)\s+/i, '').trim();
+                } else if (l.includes('hund') || l.includes('katze') || l.includes('haustier')) {
+                    key = "haustier";
+                } else if (l.includes('lieblings')) {
+                    key = "vorliebe";
+                }
+
+                const mem = store.memory;
+                if (key !== "allgemein") {
+                    mem[key] = value;
+                } else {
+                    if (!mem.fakten) mem.fakten = [];
+                    mem.fakten.push(value);
+                }
+                store.memory = mem;
+                logActivity('Gedächtnis aktualisiert.');
+                return `Verstanden, Sir. Ich habe mir gemerkt: "${value}".`;
+            }
+        },
+        {
+            // Abrufen: "Was weißt du über mich", "Wie heiße ich", "Was ist mein Hund"
+            test: l => l.includes('was weißt du') || l.includes('was hast du dir gemerkt') || l.includes('wie heiße ich') || l.includes('wer bin ich') || l.includes('was ist mein'),
+            run: (raw, l) => {
+                if (!currentUser) return "Bitte melden Sie sich an, um auf das persönliche Gedächtnis zuzugreifen, Sir.";
+                const mem = store.memory;
+
+                if (l.includes('wie heiße ich') || l.includes('wer bin ich')) {
+                    if (mem.name) return `Sie heißen ${mem.name}, Sir.`;
+                    return `Sie sind als ${currentUser} angemeldet, Sir.`;
+                }
+
+                let results = [];
+                if (mem.name) results.push(`Name: ${mem.name}`);
+                if (mem.haustier) results.push(`Haustier: ${mem.haustier}`);
+                if (mem.vorliebe) results.push(`Vorliebe: ${mem.vorliebe}`);
+                if (mem.fakten && mem.fakten.length) {
+                    results.push(`Weitere Fakten:\n- ` + mem.fakten.join('\n- '));
+                }
+
+                if (results.length === 0) {
+                    return "Ich habe derzeit noch keine spezifischen Erinnerungen gespeichert, Sir. Sagen Sie zum Beispiel: 'Merke dir: Meine Lieblingsfarbe ist Blau'.";
+                }
+
+                return `Hier ist das, was ich mir über Sie gemerkt habe, Sir:\n${results.join('\n')}`;
+            }
+        },
+        {
+            test: l => l.includes('gedächtnis löschen') || l.includes('erinnerungen löschen'),
+            run: () => {
+                if (!currentUser) return "Bitte zuerst anmelden.";
+                store.memory = {};
+                logActivity('Gedächtnis gelöscht.');
+                return "Sämtliche gespeicherten Erinnerungen für dieses Konto wurden gelöscht, Sir.";
+            }
+        },
+
+        /* --- STANDARD BEFEHLE --- */
         {
             test: l => /\bich bin zurück\b|^bin wieder da/.test(l),
-            run: () => "Willkommen zurück, Sir. Die Systeme sind einsatzbereit — wie darf ich Ihnen helfen?",
+            run: () => `Willkommen zurück, Sir. Die Systeme sind einsatzbereit — wie darf ich Ihnen helfen?`,
             cueId: 'AtyourService',
         },
         {
@@ -337,7 +563,7 @@
         },
         {
             test: l => l.includes('stelle dich vor') || l.includes('wer bist du') || l.includes('wer ist ires'),
-            run: () => "Ich bin I.R.E.S. — Intelligent Response and Execution System. Ich stehe Ihnen für Systemanalysen, Notizen, Berechnungen und allgemeine Informationen zur Verfügung.",
+            run: () => "Ich bin I.R.E.S. — Intelligent Response and Execution System. Ich stehe Ihnen für Systemanalysen, Notizen, Berechnungen, Langzeitgedächtnis und allgemeine Informationen zur Verfügung.",
             cueId: 'Introduction',
         },
         {
@@ -373,9 +599,10 @@
             },
         },
         {
-            test: l => l.startsWith('notiz') || l.startsWith('notiz an mich') || l.startsWith('merke'),
+            test: l => l.startsWith('notiz') || l.startsWith('notiz an mich') || l.startsWith('merkenotiz'),
             run: (raw) => {
-                const content = raw.replace(/^notiz an mich:|^notiz:|^merke (dir )?/i, '').trim();
+                if (!currentUser) return "Bitte melden Sie sich an, um Notizen zu speichern.";
+                const content = raw.replace(/^notiz an mich:|^notiz:|^merkenotiz (dir )?/i, '').trim();
                 if (!content) return "Was soll ich in den Protokollen festhalten, Sir?";
                 const notes = store.notes;
                 notes.push(content);
@@ -388,6 +615,7 @@
         {
             test: l => l.includes('zeige notizen') || l.includes('notizen anzeigen') || l === 'notizen',
             run: () => {
+                if (!currentUser) return "Bitte melden Sie sich an.";
                 const notes = store.notes;
                 if (!notes.length) return "Es befinden sich keine Notizen in den Archiven, Sir.";
                 return `Sie haben ${notes.length} gespeicherte Notiz${notes.length > 1 ? 'en' : ''}:\n${notes.map((n, i) => `${i + 1}.${n}`).join('\n')}`;
@@ -395,7 +623,13 @@
         },
         {
             test: l => l.includes('notizen löschen') || l.includes('alle notizen löschen'),
-            run: () => { store.notes = []; renderNotes(); logActivity('Notizen gelöscht.'); return "Sämtliche Notizen wurden aus dem Speicher entfernt, Sir."; },
+            run: () => { 
+                if (!currentUser) return "Bitte melden Sie sich an.";
+                store.notes = []; 
+                renderNotes(); 
+                logActivity('Notizen gelöscht.'); 
+                return "Sämtliche Notizen wurden aus dem Speicher entfernt, Sir."; 
+            },
         },
         {
             test: l => /stelle (einen )?timer auf/.test(l) || /timer für/.test(l),
@@ -423,8 +657,12 @@
             run: () => { document.body.style.transition = 'opacity 1.5s ease'; setTimeout(() => document.body.style.opacity = '0.15', 400); return "Schalte primäre Schnittstellen ab. Angenehme Ruhepause, Sir."; },
         },
         {
-            test: l => l.includes('leeren') || l.includes('bildschirm leeren') || l === 'clear' || l === 'löschen',
-            run: () => { outputArea.innerHTML = ''; return "Displayanzeige zurückgesetzt, Sir."; },
+            test: l => l.includes('chat leeren') || l.includes('verlauf löschen'),
+            run: () => { 
+                if (currentUser) store.chatHistory = []; 
+                outputArea.innerHTML = ''; 
+                return "Chatverlauf wurde für diesen Benutzer zurückgesetzt, Sir."; 
+            },
         },
         {
             test: l => l.includes('musik öffnen') || l.includes('spiele musik'),
@@ -440,31 +678,19 @@
             },
         },
         {
-            test: l => l.includes('spiel spielen') || l.includes('spiel starten'),
-            run: () => "Die Trainingssimulationen stehen bereit. Wenn Sie möchten, kann ich Ihnen in der Zwischenzeit einen Witz erzählen, Sir.",
-        },
-        {
             test: l => l === 'hilfe' || l.includes('was kannst du'),
-            run: () => "Mögliche Befehle: Uhrzeit · Datum · Wetter in <Ort> · Berechne <Ausdruck> · Notiz: <Text> · Notizen anzeigen · Timer auf <n> Minuten · Witz · Akku · Suche <Begriff> · Neustart · Herunterfahren · Leeren.",
-        },
-        {
-            test: l => l.includes('nachrichten') || l.includes('news'),
-            run: () => { window.open('https://news.google.com', '_blank'); return "Rufe die aktuellen globalen Meldungen ab, Sir."; },
-        },
-        {
-            test: l => l.includes('einstellungen') || l.includes('settings'),
-            run: () => "Über die Schaltfläche oben rechts können Sie das HUD-Farbschema anpassen, Sir.",
+            run: () => "Mögliche Befehle:\n• Login: `Anmelden [Name] [PW]` | `Registrieren [Name] [PW]` | `Abmelden`\n• Gedächtnis: `Merke dir: [Fakt]` | `Was weißt du über mich?`\n• Basis: `Uhrzeit` · `Datum` · `Wetter in <Ort>` · `Berechne <Ausdruck>` · `Notiz: <Text>` · `Timer auf <n> Min` · `Witz` · `Akku` · `Suche <Begriff>`.",
         },
         {
             test: l => l.includes('witz') || l.includes('tell me a joke'),
             run: () => jokes[Math.floor(Math.random() * jokes.length)],
         },
         {
-            test: l => l.includes('stummschalten') || l.includes('ton aus') || l.includes('stimme aus'),
+            test: l => l.includes('stummschalten') || l.includes('ton aus'),
             run: () => { store.voiceOn = false; readoutVoice.textContent = 'AUS'; return "Sprachausgabe wurde deaktiviert, Sir."; },
         },
         {
-            test: l => l.includes('ton an') || l.includes('stimme an') || l.includes('lautschalten'),
+            test: l => l.includes('ton an') || l.includes('stimme an'),
             run: () => { store.voiceOn = true; readoutVoice.textContent = 'AN'; return "Sprachausgabe ist nun wieder aktiviert, Sir."; },
         },
         {
@@ -496,17 +722,17 @@
         const lower = raw.toLowerCase();
         const matched = rules.find(r => r.test(lower));
 
-        await new Promise(res => setTimeout(res, 220)); // kurze Denkpause
+        await new Promise(res => setTimeout(res, 220));
 
         let response;
         let cueId = null;
         if (matched) {
             response = await matched.run(raw, lower);
             cueId = matched.cueId || null;
-            logActivity(`Befehl: "${raw.slice(0, 40)}"`);
+            logActivity(`Befehl: "${raw.slice(0, 30)}"`);
         } else {
             response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-            logActivity(`Nicht erkannt: "${raw.slice(0, 40)}"`);
+            logActivity(`Nicht erkannt: "${raw.slice(0, 30)}"`);
         }
 
         printIres(response, { cueId });
