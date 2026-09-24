@@ -588,6 +588,123 @@ body {
 }
 
 /* ==========================================================================
+   AUTH MODAL STYLES (MATCHES HUD DESIGN)
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(2, 5, 10, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.hidden {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 400px;
+  padding: 26px;
+  background: var(--bg);
+  border: 1px solid var(--cyan);
+  box-shadow: 0 0 25px var(--cyan-dim);
+  border-radius: var(--radius-sm);
+}
+
+.auth-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 20px;
+  font-family: var(--font-mono);
+}
+
+.auth-field {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field label {
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.auth-field input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  outline: none;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.auth-field input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-dim);
+}
+
+.auth-error-msg {
+  color: var(--danger);
+  font-size: 0.8rem;
+  min-height: 20px;
+  margin-bottom: 12px;
+  font-family: var(--font-mono);
+}
+
+.auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-btn {
+  padding: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border: 1px solid var(--cyan);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.auth-btn.primary {
+  background: var(--cyan);
+  color: var(--bg-deep);
+}
+
+.auth-btn.primary:hover {
+  background: #fff;
+  box-shadow: 0 0 12px #fff;
+}
+
+.auth-btn.secondary {
+  background: transparent;
+  color: var(--cyan);
+}
+
+.auth-btn.secondary:hover {
+  background: rgba(73, 215, 255, 0.1);
+}
+
+/* ==========================================================================
    SCROLLBARS
    ========================================================================== */
 ::-webkit-scrollbar {
