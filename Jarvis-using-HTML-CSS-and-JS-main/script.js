@@ -1,5 +1,5 @@
 /* ==========================================================================
-   J.A.R.V.I.S. — Anwendungslogik
+   I.R.E.S. — Anwendungslogik
    ========================================================================== */
 (() => {
     'use strict';
@@ -26,12 +26,12 @@
 
     /* ---------- Permanenter Status ---------- */
     const store = {
-        get notes() { try { return JSON.parse(localStorage.getItem('jarvis_notes') || '[]'); } catch { return []; } },
-        set notes(v) { localStorage.setItem('jarvis_notes', JSON.stringify(v)); },
-        get voiceOn() { return localStorage.getItem('jarvis_voice') !== 'off'; },
-        set voiceOn(v) { localStorage.setItem('jarvis_voice', v ? 'on' : 'off'); },
-        get theme() { return localStorage.getItem('jarvis_theme') || 'cyan'; },
-        set theme(v) { localStorage.setItem('jarvis_theme', v); },
+        get notes() { try { return JSON.parse(localStorage.getItem('ires_notes') || '[]'); } catch { return []; } },
+        set notes(v) { localStorage.setItem('ires_notes', JSON.stringify(v)); },
+        get voiceOn() { return localStorage.getItem('ires_voice') !== 'off'; },
+        set voiceOn(v) { localStorage.setItem('ires_voice', v ? 'on' : 'off'); },
+        get theme() { return localStorage.getItem('ires_theme') || 'cyan'; },
+        set theme(v) { localStorage.setItem('ires_theme', v); },
     };
 
     let history = [];
@@ -48,7 +48,7 @@
         tickClock();
         setInterval(tickClock, 1000);
         setStatus('idle');
-        logActivity('J.A.R.V.I.S. Systeme online.');
+        logActivity('I.R.E.S. Systeme online.');
         initBattery();
     }
 
@@ -248,7 +248,7 @@
         scrollToBottom();
     }
 
-    function printJarvis(text, { speakToo = true, cueId = null } = {}) {
+    function printIres(text, { speakToo = true, cueId = null } = {}) {
         const div = document.createElement('div');
         div.className = 'jarvis-response';
         outputArea.appendChild(div);
@@ -278,14 +278,14 @@
     }
 
     /* ==========================================================================
-       BEFEHLSDEFINITIONEN (J.A.R.V.I.S.-Stil)
+       BEFEHLSDEFINITIONEN (I.R.E.S.-Stil)
        ========================================================================== */
     const jokes = [
         "Warum können Atomphysiker nicht lügen? Weil sie alles erfinden, Sir.",
         "Ich würde Ihnen einen UDP-Witz erzählen, aber es könnte sein, dass er nicht bei Ihnen ankommt.",
         "Es gibt 10 Arten von Menschen auf der Welt, Sir: Diejenigen, die Binärzahlen verstehen, und die, die es nicht tun.",
         "Warum bevorzugen Entwickler den Dark Mode? Weil Licht Bugs anzieht, Sir.",
-        "Ich kenne einen hervorragenden Witz über Bogenreaktoren, aber er benötigt noch etwas Ladezeit.",
+        "Ich kenne einen hervorragenden Witz über Quantencomputer, aber er ist gleichzeitig lustig und nicht lustig.",
     ];
 
     function safeEval(expr) {
@@ -331,13 +331,13 @@
             cueId: 'AtyourService',
         },
         {
-            test: l => /^hallo\b|^hi\b|^hey\b|^servus\b|^moin\b|^jarvis\b/.test(l),
+            test: l => /^hallo\b|^hi\b|^hey\b|^servus\b|^moin\b|^ires\b/.test(l),
             run: () => `Stets zu Diensten, Sir. ${greetingByTime()}`,
             cueId: 'hello-sound',
         },
         {
-            test: l => l.includes('stelle dich vor') || l.includes('wer bist du') || l.includes('wer ist jarvis'),
-            run: () => "Ich bin J.A.R.V.I.S. — Just A Rather Very Intelligent System. Ich stehe Ihnen für Systemanalysen, Notizen, Berechnungen und allgemeine Informationen zur Verfügung.",
+            test: l => l.includes('stelle dich vor') || l.includes('wer bist du') || l.includes('wer ist ires'),
+            run: () => "Ich bin I.R.E.S. — Intelligent Response and Execution System. Ich stehe Ihnen für Systemanalysen, Notizen, Berechnungen und allgemeine Informationen zur Verfügung.",
             cueId: 'Introduction',
         },
         {
@@ -406,7 +406,7 @@
                 const unit = m[2].toLowerCase();
                 const ms = unit.startsWith('stunde') ? n * 3600000 : unit.startsWith('minute') ? n * 60000 : n * 1000;
                 setTimeout(() => {
-                    printJarvis(`Timer abgelaufen — Die vereinbarten ${n} ${unit} sind verstrichen, Sir.`);
+                    printIres(`Timer abgelaufen — Die vereinbarten ${n} ${unit} sind verstrichen, Sir.`);
                     logActivity('Timer beendet.');
                 }, ms);
                 logActivity(`Timer gestellt: ${n} ${unit}.`);
@@ -453,7 +453,7 @@
         },
         {
             test: l => l.includes('einstellungen') || l.includes('settings'),
-            run: () => "Über die Schalffläche oben rechts können Sie das HUD-Farbschema anpassen, Sir.",
+            run: () => "Über die Schaltfläche oben rechts können Sie das HUD-Farbschema anpassen, Sir.",
         },
         {
             test: l => l.includes('witz') || l.includes('tell me a joke'),
@@ -509,7 +509,7 @@
             logActivity(`Nicht erkannt: "${raw.slice(0, 40)}"`);
         }
 
-        printJarvis(response, { cueId });
+        printIres(response, { cueId });
     }
 
     /* ==========================================================================
