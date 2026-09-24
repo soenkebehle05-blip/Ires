@@ -335,7 +335,7 @@
         },
         {
             test: l => l.includes('stelle dich vor') || l.includes('wer bist du'),
-            run: () => "Ich bin I.R.E.S. — dein intelligentes Reaktions- & Echtzeit-System. Ich helfe dir bei Informationen, schnellen Berechnungen, Notizen, Erinnerungen und Gesprächen. Alle Systeme laufen einwandfrei.",
+            run: () => "Ich bin I.r.e.s — dein intelligentes Reaktions- & Echtzeit-System. Ich helfe dir bei Informationen, schnellen Berechnungen, Notizen, Erinnerungen und Gesprächen. Alle Systeme laufen einwandfrei.",
         },
         {
             test: l => l.includes('akku') || l.includes('batterie'),
