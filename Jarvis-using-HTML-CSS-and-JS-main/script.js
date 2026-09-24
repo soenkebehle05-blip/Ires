@@ -1,5 +1,5 @@
 /* ==========================================================================
-   JARVIS — Anwendungslogik (Deutsch)
+   I.R.E.S. — Anwendungslogik (Deutsch)
    ========================================================================== */
 (() => {
     'use strict';
@@ -26,12 +26,12 @@
 
     /* ---------- Permanenter Status ---------- */
     const store = {
-        get notes() { try { return JSON.parse(localStorage.getItem('jarvis_notes') || '[]'); } catch { return []; } },
-        set notes(v) { localStorage.setItem('jarvis_notes', JSON.stringify(v)); },
-        get voiceOn() { return localStorage.getItem('jarvis_voice') !== 'off'; },
-        set voiceOn(v) { localStorage.setItem('jarvis_voice', v ? 'on' : 'off'); },
-        get theme() { return localStorage.getItem('jarvis_theme') || 'cyan'; },
-        set theme(v) { localStorage.setItem('jarvis_theme', v); },
+        get notes() { try { return JSON.parse(localStorage.getItem('ires_notes') || '[]'); } catch { return []; } },
+        set notes(v) { localStorage.setItem('ires_notes', JSON.stringify(v)); },
+        get voiceOn() { return localStorage.getItem('ires_voice') !== 'off'; },
+        set voiceOn(v) { localStorage.setItem('ires_voice', v ? 'on' : 'off'); },
+        get theme() { return localStorage.getItem('ires_theme') || 'cyan'; },
+        set theme(v) { localStorage.setItem('ires_theme', v); },
     };
 
     let history = [];
@@ -141,7 +141,7 @@
         notesCount.textContent = `(${notes.length})`;
         notesList.innerHTML = '';
         if (notes.length === 0) {
-            notesList.innerHTML = '<li class="notes-empty">Keine Notizen vorhanden. Versuche "Notiz: Wäsche abholen".</li>';
+            notesList.innerHTML = '<li class="notes-empty">Keine Notizen vorhanden. Versuche "Notiz: Wäsche machen".</li>';
             return;
         }
         notes.forEach((n, i) => {
@@ -248,7 +248,7 @@
         scrollToBottom();
     }
 
-    function printJarvis(text, { speakToo = true, cueId = null } = {}) {
+    function printIres(text, { speakToo = true, cueId = null } = {}) {
         const div = document.createElement('div');
         div.className = 'jarvis-response';
         outputArea.appendChild(div);
@@ -302,7 +302,7 @@
         try {
             const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1&language=de`);
             const geo = await geoRes.json();
-            if (!geo.results || !geo.results.length) return `Ich konnte keinen Ort namens "${place}" finden.`;
+            if (!geo.results || !geo.results.length) return `Ich konnte keinen Ort namens "${place}" finden, Sir.`;
             const { latitude, longitude, name, country } = geo.results[0];
             const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m,relative_humidity_2m`);
             const w = await wRes.json();
@@ -316,18 +316,18 @@
 
     function greetingByTime() {
         const h = new Date().getHours();
-        if (h < 5) return 'Nachtarbeit?';
-        if (h < 12) return 'Guten Morgen.';
-        if (h < 17) return 'Guten Tag.';
-        if (h < 21) return 'Guten Abend.';
-        return 'Noch wach?';
+        if (h < 5) return 'Nachtarbeit, Sir?';
+        if (h < 12) return 'Guten Morgen, Sir.';
+        if (h < 17) return 'Guten Tag, Sir.';
+        if (h < 21) return 'Guten Abend, Sir.';
+        return 'Noch wach, Sir?';
     }
 
     /* Regelstruktur: { test: (lowerInput) => bool, run: (raw, lower) => string | Promise<string> } */
     const rules = [
         {
             test: l => /\bich bin zurück\b|^bin wieder da/.test(l),
-            run: () => "Willkommen zurück. Die Systeme laufen bereit — wie kann ich helfen?",
+            run: () => "Willkommen zurück, Sir. Die Systeme laufen bereit — wie kann ich helfen?",
         },
         {
             test: l => /^hallo\b|^hi\b|^hey\b|^servus\b|^moin\b/.test(l),
@@ -335,13 +335,13 @@
         },
         {
             test: l => l.includes('stelle dich vor') || l.includes('wer bist du'),
-            run: () => "Ich bin JARVIS — ein virtueller Assistent, der dir bei Informationen, schnellen Berechnungen, Notizen, Erinnerungen und Gesprächen hilft. Alle Systeme sind betriebsbereit.",
+            run: () => "Ich bin I.R.E.S. — dein intelligentes Reaktions- & Echtzeit-System. Ich helfe dir bei Informationen, schnellen Berechnungen, Notizen, Erinnerungen und Gesprächen. Alle Systeme laufen einwandfrei.",
         },
         {
             test: l => l.includes('akku') || l.includes('batterie'),
             run: () => readoutBattery.textContent && readoutBattery.textContent !== '—'
                 ? `Der aktuelle Akkustand beträgt ${readoutBattery.textContent}.`
-                : "Ich kann auf diesem Gerät keine Akkudaten auslesen.",
+                : "Ich kann auf diesem Gerät keine Akkudaten auslesen, Sir.",
             cueId: 'Batterylow',
         },
         {
@@ -366,14 +366,14 @@
             run: (raw) => {
                 const expr = raw.replace(/^berechne|^rechne|^was ist/i, '').trim();
                 const result = safeEval(expr);
-                return result === null ? "Ich konnte diesen Ausdruck nicht berechnen." : `${expr} = ${result}`;
+                return result === null ? "Ich konnte diesen Ausdruck nicht berechnen, Sir." : `${expr} = ${result}`;
             },
         },
         {
             test: l => l.startsWith('notiz:') || l.startsWith('notiz an mich:') || l.startsWith('merke'),
             run: (raw) => {
                 const content = raw.replace(/^notiz an mich:|^notiz:|^merke (dir )?/i, '').trim();
-                if (!content) return "Was soll ich für dich notieren?";
+                if (!content) return "Was soll ich für dich notieren, Sir?";
                 const notes = store.notes;
                 notes.push(content);
                 store.notes = notes;
@@ -386,13 +386,13 @@
             test: l => l.includes('zeige notizen') || l.includes('notizen anzeigen') || l === 'notizen',
             run: () => {
                 const notes = store.notes;
-                if (!notes.length) return "Du hast keine gespeicherten Notizen.";
+                if (!notes.length) return "Du hast keine gespeicherten Notizen, Sir.";
                 return `Du hast ${notes.length} Notiz${notes.length > 1 ? 'en' : ''}:\n${notes.map((n, i) => `${i + 1}.${n}`).join('\n')}`;
             },
         },
         {
             test: l => l.includes('notizen löschen') || l.includes('alle notizen löschen'),
-            run: () => { store.notes = []; renderNotes(); logActivity('Notizen gelöscht.'); return "Alle Notizen wurden gelöscht."; },
+            run: () => { store.notes = []; renderNotes(); logActivity('Notizen gelöscht.'); return "Alle Notizen wurden gelöscht, Sir."; },
         },
         {
             test: l => /stelle (einen )?timer auf/.test(l) || /timer für/.test(l),
@@ -403,21 +403,21 @@
                 const unit = m[2].toLowerCase();
                 const ms = unit.startsWith('stunde') ? n * 3600000 : unit.startsWith('minute') ? n * 60000 : n * 1000;
                 setTimeout(() => {
-                    printJarvis(`Timer abgelaufen — ${n} ${unit} sind vergangen.`);
+                    printIres(`Timer abgelaufen — ${n} ${unit} sind vergangen, Sir.`);
                     logActivity('Timer beendet.');
                 }, ms);
                 logActivity(`Timer gestellt: ${n} ${unit}.`);
-                return `Timer auf ${n} ${unit} gestellt. Ich gebe Bescheid.`;
+                return `Timer auf ${n} ${unit} gestellt. Ich gebe Bescheid, Sir.`;
             },
         },
         {
             test: l => l.includes('neu starten') || l.includes('neustart') || l.includes('reboot'),
-            run: () => { setTimeout(() => location.reload(), 1800); return "Schnittstelle wird neu gestartet — bis gleich."; },
+            run: () => { setTimeout(() => location.reload(), 1800); return "Schnittstelle wird neu gestartet — bis gleich, Sir."; },
             cueId: 'reboot',
         },
         {
             test: l => l.includes('herunterfahren') || l.includes('ausschalten') || l.includes('tschüss') || l.includes('gute nacht'),
-            run: () => { document.body.style.transition = 'opacity 1.5s ease'; setTimeout(() => document.body.style.opacity = '0.15', 400); return "Nicht essenzielle Systeme werden heruntergefahren. Auf Wiedersehen."; },
+            run: () => { document.body.style.transition = 'opacity 1.5s ease'; setTimeout(() => document.body.style.opacity = '0.15', 400); return "Nicht essenzielle Systeme werden heruntergefahren. Auf Wiedersehen, Sir."; },
         },
         {
             test: l => l.includes('leeren') || l.includes('bildschirm leeren') || l === 'clear' || l === 'löschen',
@@ -425,20 +425,20 @@
         },
         {
             test: l => l.includes('musik öffnen') || l.includes('spiele musik'),
-            run: () => { window.open('https://open.spotify.com', '_blank'); return "Öffne den Musikplayer."; },
+            run: () => { window.open('https://open.spotify.com', '_blank'); return "Öffne den Musikplayer, Sir."; },
         },
         {
             test: l => l.startsWith('suche') || l.startsWith('suche nach'),
             run: (raw) => {
                 const q = raw.replace(/^suche( nach)?/i, '').trim();
-                if (!q) return "Wonach soll ich suchen?";
+                if (!q) return "Wonach soll ich suchen, Sir?";
                 window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank');
-                return `Suche nach "${q}".`;
+                return `Suche nach "${q}", Sir.`;
             },
         },
         {
             test: l => l.includes('spiel spielen') || l.includes('spiel starten'),
-            run: () => "Startverlauf vorbereitet — frag mich doch in der Zwischenzeit nach einem 'Witz'. Die vollständige Spielintegration folgt in Kürze.",
+            run: () => "Startverlauf vorbereitet — frag mich doch in der Zwischenzeit nach einem 'Witz'. Die vollständige Spielintegration folgt in Kürze, Sir.",
         },
         {
             test: l => l === 'hilfe' || l.includes('was kannst du'),
@@ -446,14 +446,14 @@
         },
         {
             test: l => l.includes('nachrichten') || l.includes('news'),
-            run: () => { window.open('https://news.google.com', '_blank'); return "Öffne die aktuellen Schlagzeilen."; },
+            run: () => { window.open('https://news.google.com', '_blank'); return "Öffne die aktuellen Schlagzeilen, Sir."; },
         },
         {
             test: l => l.includes('einstellungen') || l.includes('settings'),
-            run: () => "Verwende das ◐-Symbol oben rechts, um das Farbschema zu wechseln. Weitere Einstellungen folgen bald.",
+            run: () => "Verwende das ◐-Symbol oben rechts, um das Farbschema zu wechseln. Weitere Einstellungen folgen bald, Sir.",
         },
         {
-            test: l => l.includes('witz'),
+            test: l => l.includes('witz') || l.includes('tell me a joke'),
             run: () => jokes[Math.floor(Math.random() * jokes.length)],
         },
         {
@@ -466,13 +466,13 @@
         },
         {
             test: l => l.includes('danke') || l.includes('vielen dank'),
-            run: () => "Jederzeit gerne.",
+            run: () => "Jederzeit gerne, Sir.",
         },
     ];
 
     const fallbacks = [
         "Ich bin mir nicht sicher, ob ich das verstanden habe — versuche 'Hilfe' einzugeben.",
-        "Das liegt außerhalb meiner aktuellen Parameter. Tippe 'Hilfe' für eine Liste der Befehle.",
+        "Das liegt außerhalb meiner aktuellen Parameter, Sir. Tippe 'Hilfe' für eine Liste der Befehle.",
         "Das habe ich leider nicht als gültigen Befehl erkannt.",
     ];
 
@@ -506,7 +506,7 @@
             logActivity(`Nicht erkannt: "${raw.slice(0, 40)}"`);
         }
 
-        printJarvis(response, { cueId });
+        printIres(response, { cueId });
     }
 
     /* ==========================================================================
