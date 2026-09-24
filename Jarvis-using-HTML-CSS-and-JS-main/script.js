@@ -370,7 +370,7 @@
             },
         },
         {
-            test: l => l.startsWith('notiz:') || l.startsWith('notiz an mich:') || l.startsWith('merke'),
+            test: l => l.startsWith('notiz') || l.startsWith('notiz an mich') || l.startsWith('merke'),
             run: (raw) => {
                 const content = raw.replace(/^notiz an mich:|^notiz:|^merke (dir )?/i, '').trim();
                 if (!content) return "Was soll ich für dich notieren, Sir?";
