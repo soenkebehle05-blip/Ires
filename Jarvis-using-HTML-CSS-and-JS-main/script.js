@@ -221,7 +221,9 @@ function setQuickInput(text) {
     function tickClock() {
         const now = new Date();
         clockEl.textContent = now.toLocaleTimeString([], { hour12: false });
-        readoutDate.textContent = now.toLocaleDateString('de-DE', { month: 'short', day: 'numeric', year: 'numeric' });
+        if (readoutDate) {
+            readoutDate.textContent = now.toLocaleDateString('de-DE', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
         const uptimeMs = Date.now() - bootTime;
         const s = Math.floor(uptimeMs / 1000) % 60;
         const m = Math.floor(uptimeMs / 60000) % 60;
@@ -491,9 +493,12 @@ function setQuickInput(text) {
                 }
 
                 const mem = store.memory;
-                if (key !== "allgemein") mem[key] = value;
-                else {
-                    if (!mem.fakten) mem.fakten = [];
+                if (key !== "allgemein") {
+                    mem[key] = value;
+                } else {
+                    if (!Array.isArray(mem.fakten)) {
+                        mem.fakten = [];
+                    }
                     mem.fakten.push(value);
                 }
                 store.memory = mem;
@@ -502,7 +507,7 @@ function setQuickInput(text) {
             }
         },
         {
-            test: l => l.includes('was weißt du') || l.includes('was hast du dir gemerkt') || l.includes('wie heiße ich') || l.includes('wer bin ich'),
+            test: l => l.includes('was weißt du') || l.includes('über mich') || l.includes('was hast du dir gemerkt') || l.includes('wie heiße ich') || l.includes('wer bin ich'),
             run: (raw, l) => {
                 const mem = store.memory;
                 if (l.includes('wie heiße ich') || l.includes('wer bin ich')) {
@@ -513,9 +518,11 @@ function setQuickInput(text) {
                 let results = [];
                 if (mem.name) results.push(`Name: ${mem.name}`);
                 if (mem.haustier) results.push(`Haustier: ${mem.haustier}`);
-                if (mem.fakten && mem.fakten.length) results.push(`Weitere Fakten:\n- ` + mem.fakten.join('\n- '));
+                if (mem.fakten && Array.isArray(mem.fakten) && mem.fakten.length > 0) {
+                    results.push(`Weitere Fakten:\n- ` + mem.fakten.join('\n- '));
+                }
 
-                if (results.length === 0) return "Ich habe noch keine spezifischen Erinnerungen gespeichert, Sir.";
+                if (results.length === 0) return "Ich habe noch keine spezifischen Erinnerungen über Sie gespeichert, Sir.";
                 return `Erinnerungen über Sie, Sir:\n${results.join('\n')}`;
             }
         },
@@ -541,7 +548,7 @@ function setQuickInput(text) {
         {
             test: l => l.includes('akku') || l.includes('batterie'),
             run: () => {
-                const batVal = readoutBattery.textContent || '--%';
+                const batVal = readoutBattery ? readoutBattery.textContent : '--%';
                 return `Der aktuelle Akkustand beträgt ${batVal}, Sir.`;
             }
         },
