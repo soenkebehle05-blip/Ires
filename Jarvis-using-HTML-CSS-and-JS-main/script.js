@@ -1,6 +1,26 @@
 /* ==========================================================================
    I.R.E.S. — Anwendungslogik mit Modal-Login & Gedächtnis
    ========================================================================== */
+
+/* Globale Hilfsfunktionen für Schnellbefehle */
+function sendQuickCommand(text) {
+    const input = document.getElementById('user-input');
+    if (input) {
+        input.value = text;
+        if (typeof window.handleSubmit === 'function') {
+            window.handleSubmit();
+        }
+    }
+}
+
+function setQuickInput(text) {
+    const input = document.getElementById('user-input');
+    if (input) {
+        input.value = text;
+        input.focus();
+    }
+}
+
 (() => {
     'use strict';
 
@@ -519,6 +539,13 @@
             run: () => `Es ist ${new Date().toLocaleTimeString('de-DE')} Uhr.`
         },
         {
+            test: l => l.includes('akku') || l.includes('batterie'),
+            run: () => {
+                const batVal = readoutBattery.textContent || '--%';
+                return `Der aktuelle Akkustand beträgt ${batVal}, Sir.`;
+            }
+        },
+        {
             test: l => l.startsWith('notiz'),
             run: (raw) => {
                 const content = raw.replace(/^notiz:?/i, '').trim();
@@ -558,6 +585,8 @@
         let response = matched ? await matched.run(raw, lower) : "Diesen Befehl kenne ich nicht, Sir.";
         printIres(response);
     }
+
+    window.handleSubmit = handleSubmit;
 
     authSubmitBtn.addEventListener('click', handleAuthSubmit);
     authToggleBtn.addEventListener('click', toggleAuthMode);
