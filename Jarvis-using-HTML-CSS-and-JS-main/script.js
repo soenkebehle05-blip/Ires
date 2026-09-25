@@ -496,18 +496,18 @@ function setQuickInput(text) {
                        `• "Abmelden" — Loggt dich aus dem System aus`;
             }
         },
-       {
-    test: l => l.includes('datum') || l.includes('welcher tag'),
-    run: () => {
-        const today = new Date().toLocaleDateString('de-DE', {
-            weekday: 'long',
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
-        });
-        return `Heute ist ${today}, Sir.`;
-    }
-},
+        {
+              test: l => l.includes('datum') || l.includes('welcher tag'),
+              run: () => {
+                 const today = new Date().toLocaleDateString('de-DE', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+                     return `Heute ist ${today}, Sir.`;
+             }
+        },
         {
             test: l => l === 'abmelden' || l === 'logout',
             run: () => { logoutUser(); return "Sie wurden abgemeldet."; }
