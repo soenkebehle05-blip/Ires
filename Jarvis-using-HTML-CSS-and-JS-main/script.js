@@ -38,7 +38,6 @@ function setQuickInput(text) {
     const activityLog = document.getElementById('activity-log');
     const notesList = document.getElementById('notes-list');
     const notesCount = document.getElementById('notes-count');
-    const readoutDate = document.getElementById('readout-date');
     const readoutUptime = document.getElementById('readout-uptime');
     const readoutBattery = document.getElementById('readout-battery');
     const readoutVoice = document.getElementById('readout-voice');
@@ -221,9 +220,17 @@ function setQuickInput(text) {
     function tickClock() {
         const now = new Date();
         clockEl.textContent = now.toLocaleTimeString([], { hour12: false });
+
+        // Dynamischer Abruf des Datumselements
+        const readoutDate = document.getElementById('readout-date');
         if (readoutDate) {
-            readoutDate.textContent = now.toLocaleDateString('de-DE', { month: 'short', day: 'numeric', year: 'numeric' });
+            readoutDate.textContent = now.toLocaleDateString('de-DE', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
         }
+
         const uptimeMs = Date.now() - bootTime;
         const s = Math.floor(uptimeMs / 1000) % 60;
         const m = Math.floor(uptimeMs / 60000) % 60;
@@ -475,6 +482,21 @@ function setQuickInput(text) {
 
     const rules = [
         {
+            test: l => l.includes('hilfe') || l.includes('befehle') || l.includes('was kannst du'),
+            run: () => {
+                return `Verfügbare Befehle:\n` +
+                       `• "Wie viel Uhr ist es?" — Zeigt die aktuelle Uhrzeit an\n` +
+                       `• "Wetter in [Ort]" — Ruft das aktuelle Wetter ab\n` +
+                       `• "Merke dir: [Text]" — Speichert eine Information\n` +
+                       `• "Was weißt du über mich?" — Zeigt alle gespeicherten Erinnerungen\n` +
+                       `• "Gedächtnis löschen" — Löscht alle gespeicherten Fakten\n` +
+                       `• "Notiz: [Text]" — Erstellt einen Eintrag in der Notizliste\n` +
+                       `• "Wie viel Akku habe ich?" — Zeigt den Akkustand an\n` +
+                       `• "Erzähl mir einen Witz" — Gibt einen zufälligen Witz aus\n` +
+                       `• "Abmelden" — Loggt dich aus dem System aus`;
+            }
+        },
+        {
             test: l => l === 'abmelden' || l === 'logout',
             run: () => { logoutUser(); return "Sie wurden abgemeldet."; }
         },
@@ -589,7 +611,7 @@ function setQuickInput(text) {
 
         await new Promise(res => setTimeout(res, 200));
 
-        let response = matched ? await matched.run(raw, lower) : "Diesen Befehl kenne ich nicht, Sir.";
+        let response = matched ? await matched.run(raw, lower) : "Diesen Befehl kenne ich nicht, Sir. Schreiben Sie 'Hilfe' für alle Befehle.";
         printIres(response);
     }
 
