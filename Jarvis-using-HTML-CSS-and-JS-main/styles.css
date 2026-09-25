@@ -145,12 +145,9 @@ body {
 }
 
 @keyframes pulse-dot {
-
-  0%,
-  100% {
+  0%, 100% {
     opacity: 1;
   }
-
   50% {
     opacity: .35;
   }
@@ -424,12 +421,9 @@ body {
 }
 
 @keyframes breathe {
-
-  0%,
-  100% {
+  0%, 100% {
     transform: scale(1);
   }
-
   50% {
     transform: scale(1.15);
   }
@@ -759,7 +753,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .ring,
   #reactor-core,
   .status-dot.busy,
