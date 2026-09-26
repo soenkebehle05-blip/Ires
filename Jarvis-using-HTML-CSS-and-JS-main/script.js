@@ -38,6 +38,7 @@ function setQuickInput(text) {
     const activityLog = document.getElementById('activity-log');
     const notesList = document.getElementById('notes-list');
     const notesCount = document.getElementById('notes-count');
+    const readoutDate = document.getElementById('readout-date');
     const readoutUptime = document.getElementById('readout-uptime');
     const readoutBattery = document.getElementById('readout-battery');
     const readoutVoice = document.getElementById('readout-voice');
@@ -221,8 +222,6 @@ function setQuickInput(text) {
         const now = new Date();
         clockEl.textContent = now.toLocaleTimeString([], { hour12: false });
 
-        // Dynamischer Abruf des Datumselements
-        const readoutDate = document.getElementById('readout-date');
         if (readoutDate) {
             readoutDate.textContent = now.toLocaleDateString('de-DE', {
                 day: '2-digit',
@@ -486,10 +485,13 @@ function setQuickInput(text) {
             run: () => {
                 return `Verfügbare Befehle:\n` +
                        `• "Wie viel Uhr ist es?" — Zeigt die aktuelle Uhrzeit an\n` +
+                       `• "Welches Datum ist heute?" — Zeigt das Datum an\n` +
+                       `• "Suche [Suchbegriff]" — Öffnet Google-Suche im neuen Fenster\n` +
                        `• "Wetter in [Ort]" — Ruft das aktuelle Wetter ab\n` +
                        `• "Merke dir: [Text]" — Speichert eine Information\n` +
                        `• "Was weißt du über mich?" — Zeigt alle gespeicherten Erinnerungen\n` +
                        `• "Gedächtnis löschen" — Löscht alle gespeicherten Fakten\n` +
+                       `• "Notizen anzeigen" — Zeigt deine Notizen an\n` +
                        `• "Notiz: [Text]" — Erstellt einen Eintrag in der Notizliste\n` +
                        `• "Wie viel Akku habe ich?" — Zeigt den Akkustand an\n` +
                        `• "Erzähl mir einen Witz" — Gibt einen zufälligen Witz aus\n` +
@@ -497,20 +499,50 @@ function setQuickInput(text) {
             }
         },
         {
-              test: l => l.includes('datum') || l.includes('welcher tag'),
-              run: () => {
-                 const today = new Date().toLocaleDateString('de-DE', {
-                        weekday: 'long',
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric'
-                    });
-                     return `Heute ist ${today}, Sir.`;
-             }
-        },
-        {
             test: l => l === 'abmelden' || l === 'logout',
             run: () => { logoutUser(); return "Sie wurden abgemeldet."; }
+        },
+        {
+            test: l => l.includes('datum') || l.includes('welcher tag'),
+            run: () => {
+                const today = new Date().toLocaleDateString('de-DE', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                return `Heute ist ${today}, Sir.`;
+            }
+        },
+        {
+            test: l => l.startsWith('suche') || l.startsWith('google'),
+            run: (raw) => {
+                const query = raw.replace(/^suche nach|^suche|^google/i, '').trim();
+                if (!query) return "Was soll ich für Sie suchen, Sir?";
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+                logActivity(`Websuche gestartet: ${query}`);
+                return `Ich habe ein neues Fenster für die Suche nach "${query}" geöffnet, Sir.`;
+            }
+        },
+        {
+            test: l => l === 'notizen' || l.includes('notizen anzeigen') || l.includes('meine notizen') || l.includes('welche notizen'),
+            run: () => {
+                const notes = store.notes;
+                if (notes.length === 0) return "Sie haben aktuell keine Memos oder Notizen gespeichert, Sir.";
+                return `Ihre gespeicherten Notizen:\n- ` + notes.join('\n- ');
+            }
+        },
+        {
+            test: l => l.startsWith('notiz:'),
+            run: (raw) => {
+                const content = raw.replace(/^notiz:/i, '').trim();
+                if (!content) return "Inhalt der Notiz fehlt. Beispiel: 'Notiz: Einkaufen gehen'";
+                const notes = store.notes;
+                notes.push(content);
+                store.notes = notes;
+                renderNotes();
+                return `Notiz gespeichert: "${content}".`;
+            }
         },
         {
             test: l => /^merke dir:?|^merke:?|^vermerke:?|^erinnere dich:?/.test(l) || /^mein(e)? \w+ ist/.test(l) || /^ich heiße/.test(l),
@@ -584,18 +616,6 @@ function setQuickInput(text) {
             run: () => {
                 const batVal = readoutBattery ? readoutBattery.textContent : '--%';
                 return `Der aktuelle Akkustand beträgt ${batVal}, Sir.`;
-            }
-        },
-        {
-            test: l => l.startsWith('notiz'),
-            run: (raw) => {
-                const content = raw.replace(/^notiz:?/i, '').trim();
-                if (!content) return "Inhalt der Notiz fehlt.";
-                const notes = store.notes;
-                notes.push(content);
-                store.notes = notes;
-                renderNotes();
-                return `Notiz gespeichert: "${content}".`;
             }
         },
         {
