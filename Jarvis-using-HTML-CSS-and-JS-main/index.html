@@ -41,10 +41,10 @@
             <div class="panel-title">SYSTEM-EINSTELLUNGEN</div>
             <div class="menu-content">
                 <div class="menu-section">
-                    <label for="ical-url-input"><strong>GOOGLE KALENDER (iCal-Link):</strong></label>
-                    <p class="menu-desc">Füge hier den geheimen iCal-Link deines Google Kalenders ein:</p>
-                    <input type="text" id="ical-url-input" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" autocomplete="off">
-                    <button type="button" id="save-ical-btn" class="quick-btn">Kalender-Link speichern</button>
+                    <label for="ical-url-input"><strong>GOOGLE KALENDER (iCal-Links):</strong></label>
+                    <p class="menu-desc">Füge hier deine geheimen iCal-Links ein (ein Link pro Zeile oder durch Komma getrennt):</p>
+                    <textarea id="ical-url-input" rows="4" style="width: 100%; background: rgba(0,20,30,0.8); border: 1px solid var(--accent-color, #00f0ff); color: #fff; font-family: inherit; padding: 8px; resize: vertical;" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics&#10;https://calendar.google.com/calendar/ical/.../basic.ics"></textarea>
+                    <button type="button" id="save-ical-btn" class="quick-btn" style="margin-top: 8px;">Kalender-Links speichern</button>
                     <span id="ical-status-msg" style="display:block; margin-top:5px; font-size:0.8em; color:var(--accent-color);"></span>
                 </div>
                 <hr style="border-color: rgba(0,240,255,0.2); margin: 15px 0;">
