@@ -32,9 +32,25 @@
                 <div class="status-item">
                     <span id="clock">00:00:00</span>
                 </div>
-                <button id="theme-toggle" title="Farbschema wechseln">◐</button>
+                <button id="theme-toggle" title="Klick: Menü | Doppelklick: Farbe">◐</button>
             </div>
         </header>
+
+        <!-- Settings / System Overlay Menu -->
+        <div id="settings-menu" class="hidden hud-panel">
+            <div class="panel-title">SYSTEM-EINSTELLUNGEN</div>
+            <div class="menu-content">
+                <div class="menu-section">
+                    <label for="ical-url-input"><strong>GOOGLE KALENDER (iCal-Link):</strong></label>
+                    <p class="menu-desc">Füge hier den geheimen iCal-Link deines Google Kalenders ein:</p>
+                    <input type="text" id="ical-url-input" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" autocomplete="off">
+                    <button type="button" id="save-ical-btn" class="quick-btn">Kalender-Link speichern</button>
+                    <span id="ical-status-msg" style="display:block; margin-top:5px; font-size:0.8em; color:var(--accent-color);"></span>
+                </div>
+                <hr style="border-color: rgba(0,240,255,0.2); margin: 15px 0;">
+                <button type="button" id="close-menu-btn" class="quick-btn" style="width:100%;">Menü schließen</button>
+            </div>
+        </div>
 
         <!-- Main HUD Grid -->
         <div id="main-grid">
@@ -53,13 +69,11 @@
                 <div class="panel-title">SCHNELLBEFEHLE</div>
                 <div class="quick-grid">
                     <button class="quick-btn" onclick="sendQuickCommand('Wie viel Uhr ist es?')">Uhrzeit</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Datum?')">Datum</button>
-                    <button class="quick-btn" onclick="setQuickInput('Notiz: ')">ToDo</button
-                    <button class="quick-btn" onclick="sendQuickCommand('Notizen anzeigen?')">Erinnerung</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Wetter in Korbach')">Wetter</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Wie viel Akku habe ich noch?')">Akku</button>
                     <button class="quick-btn" onclick="sendQuickCommand('Erzähl mir einen Witz')">Witz</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Hilfe!')">Hilfe</button>
+                    <button class="quick-btn" onclick="sendQuickCommand('Was weißt du über mich?')">Erinnerung</button>
+                    <button class="quick-btn" onclick="sendQuickCommand('Wetter')">Wetter</button>
+                    <button class="quick-btn" onclick="sendQuickCommand('Wie viel Akku habe ich noch?')">Akku</button>
+                    <button class="quick-btn" onclick="setQuickInput('Notiz: ')">ToDo</button>
                 </div>
             </aside>
 
@@ -111,6 +125,10 @@
             <p class="auth-desc">Bitte identifizieren Sie sich, um auf das I.R.E.S.-Netzwerk zuzugreifen.</p>
             
             <form id="auth-form" onsubmit="return false;">
+                <div class="auth-field" id="email-field" style="display: none;">
+                    <label for="auth-email">E-MAIL-ADRESSE</label>
+                    <input type="email" id="auth-email" autocomplete="off" placeholder="name@beispiel.de">
+                </div>
                 <div class="auth-field">
                     <label for="auth-username">BENUTZERNAME</label>
                     <input type="text" id="auth-username" autocomplete="off" required placeholder="Name eingeben...">
@@ -119,6 +137,12 @@
                     <label for="auth-password">PASSWORT</label>
                     <input type="password" id="auth-password" required placeholder="••••••••">
                 </div>
+
+                <div class="auth-field checkbox-field" id="remember-field" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="auth-remember" style="width: auto; cursor: pointer;">
+                    <label for="auth-remember" style="font-size: 0.85em; cursor: pointer; margin: 0;">30 Tage angemeldet bleiben</label>
+                </div>
+
                 <div id="auth-error" class="auth-error-msg"></div>
                 
                 <div class="auth-actions">
