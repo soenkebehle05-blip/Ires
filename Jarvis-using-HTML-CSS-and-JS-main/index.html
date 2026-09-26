@@ -43,22 +43,20 @@
             <aside class="hud-panel" id="panel-left">
                 <div class="panel-title">SYSTEM-STATUS</div>
                 <ul class="readout-list">
-                   <ul class="readout-list">
-                     <li><span>DATUM</span> <b id="readout-date">--.--.----</b></li> <!-- DIESE ZEILE EINFÜGEN -->
-                     <li><span>UPTIME</span> <b id="readout-uptime">00:00:00</b></li>
-                     <li><span>AKKU</span> <b id="readout-battery">--%</b></li>
-                     <li><span>SPRACHAUSGABE</span> <b id="readout-voice">AN</b></li>
-                     <li><span>MIKROFON</span> <b id="readout-mic">INAKTIV</b></li>
-                 </ul>
+                    <li><span>DATUM</span> <b id="readout-date">--.--.----</b></li>
+                    <li><span>UPTIME</span> <b id="readout-uptime">00:00:00</b></li>
+                    <li><span>AKKU</span> <b id="readout-battery">--%</b></li>
+                    <li><span>SPRACHAUSGABE</span> <b id="readout-voice">AN</b></li>
+                    <li><span>MIKROFON</span> <b id="readout-mic">INAKTIV</b></li>
+                </ul>
 
                 <div class="panel-title">SCHNELLBEFEHLE</div>
                 <div class="quick-grid">
                     <button class="quick-btn" onclick="sendQuickCommand('Wie viel Uhr ist es?')">Uhrzeit</button>
                     <button class="quick-btn" onclick="sendQuickCommand('Erzähl mir einen Witz')">Witz</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Notizen Anzeigen')">Erinnerung</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Wetter in Korbach')">Wetter</button>
+                    <button class="quick-btn" onclick="sendQuickCommand('Was weißt du über mich?')">Erinnerung</button>
+                    <button class="quick-btn" onclick="sendQuickCommand('Wetter in Berlin')">Wetter</button>
                     <button class="quick-btn" onclick="sendQuickCommand('Wie viel Akku habe ich noch?')">Akku</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Welchen Tag haben wir Heute?')">Datum</button>
                     <button class="quick-btn" onclick="setQuickInput('Notiz: ')">ToDo</button>
                 </div>
             </aside>
