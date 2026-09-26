@@ -1,5 +1,5 @@
 /* ==========================================================================
-   I.R.E.S. — Anwendungslogik mit Modal-Login, Gedächtnis & Kalender
+   I.R.E.S. — Anwendungslogik mit Multi-Kalender, Modal-Login & Gedächtnis
    ========================================================================== */
 
 /* Globale Hilfsfunktionen für Schnellbefehle */
@@ -398,47 +398,56 @@ function setQuickInput(text) {
     }
 
     /* ==========================================================================
-       GOOGLE KALENDER (iCal Reader)
+       GOOGLE KALENDER (Unterstützung für mehrere iCal-Links)
        ========================================================================== */
     async function fetchCalendarEvents() {
-        const url = store.icalUrl;
-        if (!url) {
-            return "Kein Google Kalender iCal-Link hinterlegt, Sir. Bitte fügen Sie ihn im Menü oben rechts ein.";
+        const rawUrls = store.icalUrl;
+        if (!rawUrls.trim()) {
+            return "Keine Kalender-Links hinterlegt, Sir. Bitte fügen Sie diese im Menü oben rechts ein.";
         }
-        try {
-            // Verwendet AllOrigins Proxy zum Umgehen von CORS-Sperren
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            const res = await fetch(proxyUrl);
-            if (!res.ok) throw new Error();
-            const text = await res.text();
 
-            const matches = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g);
-            if (!matches || matches.length === 0) {
-                return "Ich konnte keine Termine in Ihrem Kalender finden, Sir.";
-            }
+        // Trennt Links nach Zeilenumbrüchen oder Kommas
+        const urls = rawUrls.split(/[\n,]/).map(u => u.trim()).filter(u => u.startsWith('http'));
 
-            let events = [];
-            matches.forEach(block => {
-                const summaryMatch = block.match(/SUMMARY:(.*)/);
-                const dtstartMatch = block.match(/DTSTART(?:;.*)?:(.*)/);
-                if (summaryMatch && dtstartMatch) {
-                    const title = summaryMatch[1].trim();
-                    const rawDate = dtstartMatch[1].trim();
-                    events.push({ title, rawDate });
+        if (urls.length === 0) {
+            return "Keine gültigen iCal-Links gefunden, Sir.";
+        }
+
+        let allEvents = [];
+
+        for (const url of urls) {
+            try {
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+                const res = await fetch(proxyUrl);
+                if (!res.ok) continue;
+                const text = await res.text();
+
+                const matches = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g);
+                if (matches) {
+                    matches.forEach(block => {
+                        const summaryMatch = block.match(/SUMMARY:(.*)/);
+                        const dtstartMatch = block.match(/DTSTART(?:;.*)?:(.*)/);
+                        if (summaryMatch && dtstartMatch) {
+                            const title = summaryMatch[1].trim();
+                            const rawDate = dtstartMatch[1].trim();
+                            allEvents.push({ title, rawDate });
+                        }
+                    });
                 }
-            });
-
-            if (events.length === 0) return "Keine anstehenden Termine gefunden, Sir.";
-
-            let output = "Ihre nächsten Kalender-Einträge:\n";
-            events.slice(0, 5).forEach((ev, idx) => {
-                output += `• ${ev.title}\n`;
-            });
-            return output;
-
-        } catch (e) {
-            return "Fehler beim Abrufen des Kalenders. Bitte prüfen Sie den iCal-Link im Menü.";
+            } catch (e) {
+                // Einzelne Fehler überspringen
+            }
         }
+
+        if (allEvents.length === 0) {
+            return "Ich konnte keine Termine in deinen angegebenen Kalendern finden, Sir.";
+        }
+
+        let output = `Ihre nächsten Kalender-Einträge (aus ${urls.length} Kalendern):\n`;
+        allEvents.slice(0, 8).forEach((ev) => {
+            output += `• ${ev.title}\n`;
+        });
+        return output;
     }
 
     /* ==========================================================================
@@ -587,7 +596,7 @@ function setQuickInput(text) {
                        `• "Wie viel Uhr ist es?" — Zeigt die aktuelle Uhrzeit an\n` +
                        `• "Welches Datum ist heute?" — Zeigt das Datum an\n` +
                        `• "Suche [Suchbegriff]" — Öffnet Google-Suche im neuen Fenster\n` +
-                       `• "Kalender" / "Termine" — Liest deinen Google Kalender aus\n` +
+                       `• "Kalender" / "Termine" — Liest deine Google Kalender aus\n` +
                        `• "Wetter in [Ort]" — Ruft das aktuelle Wetter ab\n` +
                        `• "Merke dir: [Text]" — Speichert eine Information\n` +
                        `• "Was weißt du über mich?" — Zeigt alle gespeicherten Erinnerungen\n` +
@@ -766,8 +775,8 @@ function setQuickInput(text) {
     /* Einstellungsmenü & Theme-Button Event-Handling */
     saveIcalBtn.addEventListener('click', () => {
         store.icalUrl = icalUrlInput.value.trim();
-        icalStatusMsg.textContent = 'iCal-Link gespeichert!';
-        logActivity('Kalender-Link aktualisiert.');
+        icalStatusMsg.textContent = 'Kalender-Links gespeichert!';
+        logActivity('Kalender-Links aktualisiert.');
         setTimeout(() => { icalStatusMsg.textContent = ''; }, 3000);
     });
 
