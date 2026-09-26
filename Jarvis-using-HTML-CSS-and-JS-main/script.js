@@ -1,5 +1,5 @@
 /* ==========================================================================
-   I.R.E.S. — Anwendungslogik mit Modal-Login & Gedächtnis
+   I.R.E.S. — Anwendungslogik mit Modal-Login, Gedächtnis & Kalender
    ========================================================================== */
 
 /* Globale Hilfsfunktionen für Schnellbefehle */
@@ -44,11 +44,22 @@ function setQuickInput(text) {
     const readoutVoice = document.getElementById('readout-voice');
     const readoutMic = document.getElementById('readout-mic');
 
+    /* Settings Menu Elemente */
+    const settingsMenu = document.getElementById('settings-menu');
+    const icalUrlInput = document.getElementById('ical-url-input');
+    const saveIcalBtn = document.getElementById('save-ical-btn');
+    const icalStatusMsg = document.getElementById('ical-status-msg');
+    const closeMenuBtn = document.getElementById('close-menu-btn');
+
     /* Auth Modal Elemente */
     const authModal = document.getElementById('auth-modal');
     const authTitle = document.getElementById('auth-title');
+    const authEmailInput = document.getElementById('auth-email');
+    const emailField = document.getElementById('email-field');
     const authUsernameInput = document.getElementById('auth-username');
     const authPasswordInput = document.getElementById('auth-password');
+    const authRememberInput = document.getElementById('auth-remember');
+    const rememberField = document.getElementById('remember-field');
     const authError = document.getElementById('auth-error');
     const authSubmitBtn = document.getElementById('auth-submit-btn');
     const authToggleBtn = document.getElementById('auth-toggle-btn');
@@ -83,6 +94,13 @@ function setQuickInput(text) {
         },
         set memory(v) {
             if (currentUser) localStorage.setItem(`ires_memory_${currentUser}`, JSON.stringify(v));
+        },
+        get icalUrl() {
+            if (!currentUser) return '';
+            return localStorage.getItem(`ires_ical_${currentUser}`) || '';
+        },
+        set icalUrl(v) {
+            if (currentUser) localStorage.setItem(`ires_ical_${currentUser}`, v);
         }
     };
 
@@ -91,7 +109,7 @@ function setQuickInput(text) {
     const bootTime = Date.now();
 
     /* ==========================================================================
-       AUTHENTIFIZIERUNG / POPUP-MODAL
+       AUTHENTIFIZIERUNG / POPUP-MODAL & 30-TAGE LOGIN
        ========================================================================== */
     function getUsersDB() {
         try { return JSON.parse(localStorage.getItem('ires_users_db') || '{}'); } catch { return {}; }
@@ -101,29 +119,53 @@ function setQuickInput(text) {
         localStorage.setItem('ires_users_db', JSON.stringify(db));
     }
 
+    function checkSessionExpired() {
+        const sessionExp = localStorage.getItem('ires_session_exp');
+        if (sessionExp) {
+            if (Date.now() > parseInt(sessionExp, 10)) {
+                logoutUser();
+                return true;
+            }
+        }
+        return false;
+    }
+
     function handleAuthSubmit() {
         const username = authUsernameInput.value.trim();
         const password = authPasswordInput.value.trim();
-
-        if (!username || !password) {
-            authError.textContent = 'Bitte beide Felder ausfüllen.';
-            return;
-        }
-
-        const db = getUsersDB();
+        const email = authEmailInput.value.trim();
+        const rememberMe = authRememberInput.checked;
 
         if (isRegisterMode) {
+            if (!username || !password || !email) {
+                authError.textContent = 'Bitte E-Mail, Benutzernamen und Passwort ausfüllen.';
+                return;
+            }
+            const db = getUsersDB();
             if (db[username.toLowerCase()]) {
                 authError.textContent = 'Benutzername existiert bereits.';
                 return;
             }
-            db[username.toLowerCase()] = { username, password };
+            db[username.toLowerCase()] = { username, email, password };
             saveUsersDB(db);
             currentUser = username;
             localStorage.setItem('ires_active_user', currentUser);
+
+            if (rememberMe) {
+                const thirtyDays = Date.now() + (30 * 24 * 60 * 60 * 1000);
+                localStorage.setItem('ires_session_exp', thirtyDays.toString());
+            } else {
+                localStorage.removeItem('ires_session_exp');
+            }
+
             closeModal();
             onLoginSuccess(`Konto erstellt. Willkommen, ${currentUser}!`);
         } else {
+            if (!username || !password) {
+                authError.textContent = 'Bitte Benutzernamen und Passwort ausfüllen.';
+                return;
+            }
+            const db = getUsersDB();
             const user = db[username.toLowerCase()];
             if (!user || user.password !== password) {
                 authError.textContent = 'Zugangsdaten ungültig.';
@@ -131,6 +173,14 @@ function setQuickInput(text) {
             }
             currentUser = user.username;
             localStorage.setItem('ires_active_user', currentUser);
+
+            if (rememberMe) {
+                const thirtyDays = Date.now() + (30 * 24 * 60 * 60 * 1000);
+                localStorage.setItem('ires_session_exp', thirtyDays.toString());
+            } else {
+                localStorage.removeItem('ires_session_exp');
+            }
+
             closeModal();
             onLoginSuccess(`Willkommen zurück, ${currentUser}, Sir!`);
         }
@@ -141,10 +191,12 @@ function setQuickInput(text) {
         authError.textContent = '';
         if (isRegisterMode) {
             authTitle.textContent = 'NEUES KONTO ERSTELLEN';
+            emailField.style.display = 'block';
             authSubmitBtn.textContent = 'REGISTRIEREN';
             authToggleBtn.textContent = 'Bereits registriert? Anmelden';
         } else {
             authTitle.textContent = 'SYSTEM-AUTHENTIFIZIERUNG';
+            emailField.style.display = 'none';
             authSubmitBtn.textContent = 'ANMELDEN';
             authToggleBtn.textContent = 'Neues Konto erstellen';
         }
@@ -158,6 +210,7 @@ function setQuickInput(text) {
         authModal.classList.add('hidden');
         authUsernameInput.value = '';
         authPasswordInput.value = '';
+        authEmailInput.value = '';
         authError.textContent = '';
     }
 
@@ -166,12 +219,14 @@ function setQuickInput(text) {
         setStatus('idle');
         renderNotes();
         loadSavedChat();
+        if (icalUrlInput) icalUrlInput.value = store.icalUrl;
         printIres(welcomeMsg, { speakToo: true });
     }
 
     function logoutUser() {
         currentUser = null;
         localStorage.removeItem('ires_active_user');
+        localStorage.removeItem('ires_session_exp');
         outputArea.innerHTML = '';
         renderNotes();
         logActivity('Benutzer abgemeldet.');
@@ -209,10 +264,11 @@ function setQuickInput(text) {
         setStatus('idle');
         initBattery();
 
-        if (currentUser) {
+        if (currentUser && !checkSessionExpired()) {
             logActivity(`Benutzer '${currentUser}' authentifiziert.`);
             renderNotes();
             loadSavedChat();
+            if (icalUrlInput) icalUrlInput.value = store.icalUrl;
         } else {
             showModal();
         }
@@ -339,6 +395,50 @@ function setQuickInput(text) {
             li.appendChild(del);
             notesList.appendChild(li);
         });
+    }
+
+    /* ==========================================================================
+       GOOGLE KALENDER (iCal Reader)
+       ========================================================================== */
+    async function fetchCalendarEvents() {
+        const url = store.icalUrl;
+        if (!url) {
+            return "Kein Google Kalender iCal-Link hinterlegt, Sir. Bitte fügen Sie ihn im Menü oben rechts ein.";
+        }
+        try {
+            // Verwendet AllOrigins Proxy zum Umgehen von CORS-Sperren
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            const res = await fetch(proxyUrl);
+            if (!res.ok) throw new Error();
+            const text = await res.text();
+
+            const matches = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g);
+            if (!matches || matches.length === 0) {
+                return "Ich konnte keine Termine in Ihrem Kalender finden, Sir.";
+            }
+
+            let events = [];
+            matches.forEach(block => {
+                const summaryMatch = block.match(/SUMMARY:(.*)/);
+                const dtstartMatch = block.match(/DTSTART(?:;.*)?:(.*)/);
+                if (summaryMatch && dtstartMatch) {
+                    const title = summaryMatch[1].trim();
+                    const rawDate = dtstartMatch[1].trim();
+                    events.push({ title, rawDate });
+                }
+            });
+
+            if (events.length === 0) return "Keine anstehenden Termine gefunden, Sir.";
+
+            let output = "Ihre nächsten Kalender-Einträge:\n";
+            events.slice(0, 5).forEach((ev, idx) => {
+                output += `• ${ev.title}\n`;
+            });
+            return output;
+
+        } catch (e) {
+            return "Fehler beim Abrufen des Kalenders. Bitte prüfen Sie den iCal-Link im Menü.";
+        }
     }
 
     /* ==========================================================================
@@ -487,6 +587,7 @@ function setQuickInput(text) {
                        `• "Wie viel Uhr ist es?" — Zeigt die aktuelle Uhrzeit an\n` +
                        `• "Welches Datum ist heute?" — Zeigt das Datum an\n` +
                        `• "Suche [Suchbegriff]" — Öffnet Google-Suche im neuen Fenster\n` +
+                       `• "Kalender" / "Termine" — Liest deinen Google Kalender aus\n` +
                        `• "Wetter in [Ort]" — Ruft das aktuelle Wetter ab\n` +
                        `• "Merke dir: [Text]" — Speichert eine Information\n` +
                        `• "Was weißt du über mich?" — Zeigt alle gespeicherten Erinnerungen\n` +
@@ -501,6 +602,12 @@ function setQuickInput(text) {
         {
             test: l => l === 'abmelden' || l === 'logout',
             run: () => { logoutUser(); return "Sie wurden abgemeldet."; }
+        },
+        {
+            test: l => l.includes('kalender') || l.includes('termine') || l.includes('was steht an'),
+            run: async () => {
+                return await fetchCalendarEvents();
+            }
         },
         {
             test: l => l.includes('datum') || l.includes('welcher tag'),
@@ -656,7 +763,33 @@ function setQuickInput(text) {
     sendBtn.addEventListener('click', handleSubmit);
     inputField.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
 
+    /* Einstellungsmenü & Theme-Button Event-Handling */
+    saveIcalBtn.addEventListener('click', () => {
+        store.icalUrl = icalUrlInput.value.trim();
+        icalStatusMsg.textContent = 'iCal-Link gespeichert!';
+        logActivity('Kalender-Link aktualisiert.');
+        setTimeout(() => { icalStatusMsg.textContent = ''; }, 3000);
+    });
+
+    closeMenuBtn.addEventListener('click', () => {
+        settingsMenu.classList.add('hidden');
+    });
+
+    let themeClickTimer = null;
     themeToggle.addEventListener('click', () => {
+        if (themeClickTimer === null) {
+            themeClickTimer = setTimeout(() => {
+                themeClickTimer = null;
+                // Einfacher Klick: Menü öffnen / schließen
+                settingsMenu.classList.toggle('hidden');
+            }, 250);
+        }
+    });
+
+    themeToggle.addEventListener('dblclick', () => {
+        clearTimeout(themeClickTimer);
+        themeClickTimer = null;
+        // Doppelklick: Theme wechseln
         document.body.classList.toggle('theme-amber');
         store.theme = document.body.classList.contains('theme-amber') ? 'amber' : 'cyan';
     });
