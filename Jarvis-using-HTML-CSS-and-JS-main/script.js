@@ -1,8 +1,7 @@
 /* ==========================================================================
-   I.R.E.S. — Anwendungslogik mit Modal-Login, Gedächtnis & Kalender
+   I.R.E.S. — Anwendungslogik
    ========================================================================== */
 
-/* Globale Hilfsfunktionen für Schnellbefehle */
 function sendQuickCommand(text) {
     const input = document.getElementById('user-input');
     if (input) {
@@ -24,7 +23,7 @@ function setQuickInput(text) {
 (() => {
     'use strict';
 
-    /* ---------- Element-Referenzen ---------- */
+    /* Element-Referenzen */
     const outputArea = document.getElementById('output-area');
     const inputField = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
@@ -44,14 +43,12 @@ function setQuickInput(text) {
     const readoutVoice = document.getElementById('readout-voice');
     const readoutMic = document.getElementById('readout-mic');
 
-    /* Einstellungsmenü Elemente */
     const settingsMenu = document.getElementById('settings-menu');
     const icalUrlInput = document.getElementById('ical-url-input');
     const saveIcalBtn = document.getElementById('save-ical-btn');
     const icalStatusMsg = document.getElementById('ical-status-msg');
     const closeMenuBtn = document.getElementById('close-menu-btn');
 
-    /* Auth Modal Elemente */
     const authModal = document.getElementById('auth-modal');
     const authTitle = document.getElementById('auth-title');
     const authEmailInput = document.getElementById('auth-email');
@@ -67,7 +64,6 @@ function setQuickInput(text) {
     let currentUser = localStorage.getItem('ires_active_user') || null;
     let currentEmail = localStorage.getItem('ires_active_email') || null;
 
-    /* ---------- Benutzerspezifischer Speicher ---------- */
     const store = {
         get voiceOn() { return localStorage.getItem('ires_voice') !== 'off'; },
         set voiceOn(v) { localStorage.setItem('ires_voice', v ? 'on' : 'off'); },
@@ -111,9 +107,7 @@ function setQuickInput(text) {
     let historyIndex = -1;
     const bootTime = Date.now();
 
-    /* ==========================================================================
-       AUTHENTIFIZIERUNG / POPUP-MODAL
-       ========================================================================== */
+    /* Authentifizierung */
     function getUsersDB() {
         try { return JSON.parse(localStorage.getItem('ires_users_db') || '{}'); } catch { return {}; }
     }
@@ -258,9 +252,7 @@ function setQuickInput(text) {
         store.chatHistory = current;
     }
 
-    /* ==========================================================================
-       BOOT / SYSTEM-START
-       ========================================================================== */
+    /* System Boot */
     function boot() {
         if (store.theme === 'amber') document.body.classList.add('theme-amber');
         readoutVoice.textContent = store.voiceOn ? 'AN' : 'AUS';
@@ -269,7 +261,6 @@ function setQuickInput(text) {
         setStatus('idle');
         initBattery();
 
-        // Einstellungsmenü beim Start sicher ausblenden
         if (settingsMenu) {
             settingsMenu.classList.add('hidden');
         }
@@ -318,9 +309,7 @@ function setQuickInput(text) {
         }
     }
 
-    /* ==========================================================================
-       STATUS & REAKTOR ANIMATION
-       ========================================================================== */
+    /* Visualizer & Status */
     function setStatus(state) {
         statusDot.className = 'status-dot';
         reactor.className = '';
@@ -365,9 +354,6 @@ function setQuickInput(text) {
         waveform.querySelectorAll('span').forEach(b => b.style.height = '4px');
     }
 
-    /* ==========================================================================
-       LOGS & NOTIZEN
-       ========================================================================== */
     function logActivity(text) {
         const li = document.createElement('li');
         const t = new Date().toLocaleTimeString([], { hour12: false });
@@ -407,46 +393,39 @@ function setQuickInput(text) {
         });
     }
 
-    /* ==========================================================================
-       GOOGLE KALENDER (Überarbeiteter Abruf ohne Blockierung)
-       ========================================================================== */
+    /* Google Kalender Auslesen */
     async function fetchCalendarEvents() {
         const rawUrl = store.icalUrl || (icalUrlInput ? icalUrlInput.value.trim() : '');
         if (!rawUrl) {
-            return "Kein Google-Kalender-Link hinterlegt, Sir. Bitte tragen Sie ihn im Einstellungsmenü oben rechts ein.";
+            return "Kein Google-Kalender-Link hinterlegt. Bitte tragen Sie ihn im Einstellungsmenü oben rechts ein.";
         }
 
         const url = rawUrl.trim();
 
         try {
-            // Zuverlässiger CORS-Bridge-Aufruf
-            const targetUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-            const res = await fetch(targetUrl);
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            const res = await fetch(proxyUrl);
             
-            if (!res.ok) throw new Error("CORS-Proxy Fehler");
+            if (!res.ok) throw new Error("Fehler beim Abrufen");
             const text = await res.text();
 
             if (!text || !text.includes('BEGIN:VCALENDAR')) {
-                return "Der Kalender konnte nicht gelesen werden. Bitte prüfen Sie den iCal-Link im Einstellungsmenü.";
+                return "Der Kalender konnte nicht verarbeitet werden. Bitte prüfen Sie den iCal-Link im Einstellungsmenü.";
             }
 
-            const matches = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g);
-            if (!matches || matches.length === 0) {
-                return "Ich konnte aktuell keine Termine in Ihrem Kalender finden, Sir.";
-            }
-
-            let events = [];
-            matches.forEach(block => {
-                const summaryMatch = block.match(/SUMMARY:(.*)/);
-                if (summaryMatch) {
-                    let title = summaryMatch[1].replace('\r', '').trim();
+            const events = [];
+            const lines = text.split(/\r\n|\n|\r/);
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith('SUMMARY:')) {
+                    let title = lines[i].substring(8).trim();
                     if (title) events.push(title);
-                } else {
-                    events.push("Termin ohne Name / Beschäftigt");
                 }
-            });
+            }
 
-            if (events.length === 0) return "Keine anstehenden Termine gefunden, Sir.";
+            if (events.length === 0) {
+                return "Ich habe den Kalender geladen, aber aktuell keine benannten Termine darin gefunden.";
+            }
 
             const uniqueEvents = [...new Set(events)];
             let output = "Ihre nächsten Kalender-Einträge:\n";
@@ -456,13 +435,11 @@ function setQuickInput(text) {
             return output;
 
         } catch (e) {
-            return "Fehler beim Abrufen des Kalenders. Bitte stellen Sie sicher, dass der iCal-Link im Einstellungsmenü gespeichert ist.";
+            return "Fehler beim Abrufen der Kalenderdaten. Vergewissere dich, dass der Link im Einstellungsmenü gespeichert ist.";
         }
     }
 
-    /* ==========================================================================
-       SPRACHAUSGABE & I/O
-       ========================================================================== */
+    /* Sprache & Eingabe */
     let preferredVoice = null;
     function pickVoice() {
         const voices = speechSynthesis.getVoices();
@@ -527,9 +504,6 @@ function setQuickInput(text) {
         });
     }
 
-    /* ==========================================================================
-       INTERFACE DRUCK & PARSER
-       ========================================================================== */
     function printUserUI(text) {
         const div = document.createElement('div');
         div.className = 'user-command';
@@ -579,9 +553,6 @@ function setQuickInput(text) {
         return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
-    /* ==========================================================================
-       BEFEHLE & BEANTWORTUNG
-       ========================================================================== */
     const jokes = [
         "Warum können Atomphysiker nicht lügen? Weil sie alles erfinden, Sir.",
         "Ich würde Ihnen einen UDP-Witz erzählen, aber es könnte sein, dass er nicht bei Ihnen ankommt.",
@@ -756,9 +727,6 @@ function setQuickInput(text) {
         }
     ];
 
-    /* ==========================================================================
-       EVENT LISTENER & MENÜ-STEUERUNG
-       ========================================================================== */
     async function handleSubmit() {
         const raw = inputField.value.trim();
         if (!raw) return;
@@ -788,7 +756,6 @@ function setQuickInput(text) {
     if (sendBtn) sendBtn.addEventListener('click', handleSubmit);
     if (inputField) inputField.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
 
-    /* Kalender Speichern */
     if (saveIcalBtn) {
         saveIcalBtn.addEventListener('click', () => {
             const val = icalUrlInput.value.trim();
@@ -801,36 +768,22 @@ function setQuickInput(text) {
         });
     }
 
-    /* Menü Schließen Button */
+    /* Menü Schließen direkt anbinden */
     if (closeMenuBtn) {
-        closeMenuBtn.addEventListener('click', (e) => {
-            e.preventDefault();
+        closeMenuBtn.onclick = function() {
             if (settingsMenu) {
                 settingsMenu.classList.add('hidden');
             }
-        });
+        };
     }
 
-    /* Theme- / Einstellungen-Toggle Button */
-    let themeClickTimer = null;
+    /* Menü Öffnen anbinden */
     if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            if (themeClickTimer === null) {
-                themeClickTimer = setTimeout(() => {
-                    themeClickTimer = null;
-                    if (settingsMenu) {
-                        settingsMenu.classList.toggle('hidden');
-                    }
-                }, 250);
+        themeToggle.onclick = function() {
+            if (settingsMenu) {
+                settingsMenu.classList.toggle('hidden');
             }
-        });
-
-        themeToggle.addEventListener('dblclick', () => {
-            clearTimeout(themeClickTimer);
-            themeClickTimer = null;
-            document.body.classList.toggle('theme-amber');
-            store.theme = document.body.classList.contains('theme-amber') ? 'amber' : 'cyan';
-        });
+        };
     }
 
     boot();
