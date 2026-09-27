@@ -21,11 +21,11 @@
         </div>
     </header>
 
-    <!-- Einstellungen Modul (standardmäßig mit class 'hidden') -->
+    <!-- Einstellungsmenü (Standardmäßig verdeckt) -->
     <div id="settings-menu" class="settings-card hidden">
         <div class="settings-header">
             <h3>EINSTELLUNGEN</h3>
-            <button id="close-menu-btn" type="button">✕ Schließen</button>
+            <button id="close-menu-btn" type="button">✕ Menü schließen</button>
         </div>
         <div class="settings-body">
             <label for="ical-url-input">Google Kalender iCal-Link:</label>
@@ -36,51 +36,53 @@
     </div>
 
     <!-- Hauptbereich -->
-    <main id="main-container">
-        <!-- Reaktor & Waveform Visuelle Anzeige -->
-        <div id="visualizer-container">
-            <div id="reactor"></div>
-            <div id="waveform">
-                <span></span><span></span><span></span><span></span><span></span>
+    <div id="app-viewport">
+        <main id="main-container">
+            <!-- Reaktor & Waveform Visuelle Anzeige -->
+            <div id="visualizer-container">
+                <div id="reactor"></div>
+                <div id="waveform">
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
             </div>
-        </div>
 
-        <!-- Chat / Ausgabebereich -->
-        <div id="jarvis-output" class="output-container">
-            <div id="output-area"></div>
-        </div>
+            <!-- Chat / Ausgabebereich -->
+            <div id="jarvis-output" class="output-container">
+                <div id="output-area"></div>
+            </div>
 
-        <!-- Eingabezeile -->
-        <div id="input-container">
-            <input type="text" id="user-input" placeholder="Befehl eingeben oder 'Hilfe' schreiben..." autocomplete="off">
-            <button id="mic-btn" title="Spracheingabe">🎤</button>
-            <button id="send-btn">Senden</button>
-        </div>
-    </main>
+            <!-- Eingabezeile -->
+            <div id="input-container">
+                <input type="text" id="user-input" placeholder="Befehl eingeben oder 'Hilfe' schreiben..." autocomplete="off">
+                <button id="mic-btn" title="Spracheingabe">🎤</button>
+                <button id="send-btn">Senden</button>
+            </div>
+        </main>
 
-    <!-- Sidebar / System-Protokoll -->
-    <aside id="sidebar">
-        <div class="panel">
-            <h4>SYSTEM READOUT</h4>
-            <ul>
-                <li>Datum: <span id="readout-date">--.--.----</span></li>
-                <li>Uptime: <span id="readout-uptime">00:00:00</span></li>
-                <li>Akku: <span id="readout-battery">--%</span></li>
-                <li>Sprache: <span id="readout-voice">AN</span></li>
-                <li>Mikrofon: <span id="readout-mic">INAKTIV</span></li>
-            </ul>
-        </div>
+        <!-- Sidebar / System-Protokoll -->
+        <aside id="sidebar">
+            <div class="panel">
+                <h4>SYSTEM READOUT</h4>
+                <ul>
+                    <li>Datum: <span id="readout-date">--.--.----</span></li>
+                    <li>Uptime: <span id="readout-uptime">00:00:00</span></li>
+                    <li>Akku: <span id="readout-battery">--%</span></li>
+                    <li>Sprache: <span id="readout-voice">AN</span></li>
+                    <li>Mikrofon: <span id="readout-mic">INAKTIV</span></li>
+                </ul>
+            </div>
 
-        <div class="panel">
-            <h4>MEMOS <span id="notes-count">(0)</span></h4>
-            <ul id="notes-list"></ul>
-        </div>
+            <div class="panel">
+                <h4>MEMOS <span id="notes-count">(0)</span></h4>
+                <ul id="notes-list"></ul>
+            </div>
 
-        <div class="panel">
-            <h4>AKTIVITÄT</h4>
-            <ul id="activity-log"></ul>
-        </div>
-    </aside>
+            <div class="panel">
+                <h4>AKTIVITÄT</h4>
+                <ul id="activity-log"></ul>
+            </div>
+        </aside>
+    </div>
 
     <!-- Login / Auth Modal -->
     <div id="auth-modal" class="modal-backdrop hidden">
