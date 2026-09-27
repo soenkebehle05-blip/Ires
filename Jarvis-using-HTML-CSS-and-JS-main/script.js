@@ -269,7 +269,7 @@ function setQuickInput(text) {
         setStatus('idle');
         initBattery();
 
-        // Einstellungsmenü beim Boot sicherheitshalber ausblenden
+        // Einstellungsmenü beim Start sicher ausblenden
         if (settingsMenu) {
             settingsMenu.classList.add('hidden');
         }
@@ -408,7 +408,7 @@ function setQuickInput(text) {
     }
 
     /* ==========================================================================
-       GOOGLE KALENDER (Verbesserte Parsing-Logik)
+       GOOGLE KALENDER (Überarbeiteter Abruf ohne Blockierung)
        ========================================================================== */
     async function fetchCalendarEvents() {
         const rawUrl = store.icalUrl || (icalUrlInput ? icalUrlInput.value.trim() : '');
@@ -416,48 +416,38 @@ function setQuickInput(text) {
             return "Kein Google-Kalender-Link hinterlegt, Sir. Bitte tragen Sie ihn im Einstellungsmenü oben rechts ein.";
         }
 
-        // Bereinigen des Links
         const url = rawUrl.trim();
 
         try {
-            // Nutzen eines stabilen CORS-Proxies
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-            const res = await fetch(proxyUrl);
-            if (!res.ok) throw new Error("Netzwerkantwort war nicht OK");
+            // Zuverlässiger CORS-Bridge-Aufruf
+            const targetUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+            const res = await fetch(targetUrl);
             
-            const data = await res.json();
-            const text = data.contents;
+            if (!res.ok) throw new Error("CORS-Proxy Fehler");
+            const text = await res.text();
 
             if (!text || !text.includes('BEGIN:VCALENDAR')) {
                 return "Der Kalender konnte nicht gelesen werden. Bitte prüfen Sie den iCal-Link im Einstellungsmenü.";
             }
 
-            // Erkennung von Terminen Blöcken
-            const eventBlocks = text.split('BEGIN:VEVENT');
-            if (eventBlocks.length <= 1) {
-                return "Ich konnte keine Termine in Ihrem Kalender finden, Sir.";
+            const matches = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g);
+            if (!matches || matches.length === 0) {
+                return "Ich konnte aktuell keine Termine in Ihrem Kalender finden, Sir.";
             }
 
             let events = [];
-            
-            for (let i = 1; i < eventBlocks.length; i++) {
-                const block = eventBlocks[i];
+            matches.forEach(block => {
                 const summaryMatch = block.match(/SUMMARY:(.*)/);
-                
                 if (summaryMatch) {
                     let title = summaryMatch[1].replace('\r', '').trim();
                     if (title) events.push(title);
                 } else {
-                    // Falls der Kalender auf "Nur verfügbar (keine Details)" gesetzt ist
-                    events.push("Belegter Termin (Keine Details freigegeben)");
+                    events.push("Termin ohne Name / Beschäftigt");
                 }
-            }
+            });
 
-            if (events.length === 0) {
-                return "Keine anstehenden Termine in den Kalenderdaten gefunden, Sir.";
-            }
+            if (events.length === 0) return "Keine anstehenden Termine gefunden, Sir.";
 
-            // Duplikate filtern
             const uniqueEvents = [...new Set(events)];
             let output = "Ihre nächsten Kalender-Einträge:\n";
             uniqueEvents.slice(0, 5).forEach(ev => {
@@ -466,7 +456,7 @@ function setQuickInput(text) {
             return output;
 
         } catch (e) {
-            return "Fehler beim Abrufen des Kalenders. Bitte vergewissern Sie sich, dass der iCal-Link korrekt abgespeichert ist.";
+            return "Fehler beim Abrufen des Kalenders. Bitte stellen Sie sicher, dass der iCal-Link im Einstellungsmenü gespeichert ist.";
         }
     }
 
@@ -811,7 +801,7 @@ function setQuickInput(text) {
         });
     }
 
-    /* KORREKTUR: Menü Schließen Button */
+    /* Menü Schließen Button */
     if (closeMenuBtn) {
         closeMenuBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -821,7 +811,7 @@ function setQuickInput(text) {
         });
     }
 
-    /* KORREKTUR: Theme- / Einstellungen-Toggle Button */
+    /* Theme- / Einstellungen-Toggle Button */
     let themeClickTimer = null;
     if (themeToggle) {
         themeToggle.addEventListener('click', () => {
