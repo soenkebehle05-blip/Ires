@@ -95,13 +95,16 @@ function setQuickInput(text) {
         set memory(v) {
             if (currentUser) localStorage.setItem(`ires_memory_${currentUser}`, JSON.stringify(v));
         },
-        /* Kalender-Link wird an die E-Mail-Adresse gekoppelt, nicht an den Benutzernamen */
+        /* Kalender-Link: Prüft erst Mail-Zuordnung, sonst globalen Speicher */
         get icalUrl() {
-            if (!currentEmail) return '';
-            return localStorage.getItem(`ires_ical_${currentEmail}`) || '';
+            if (currentEmail && localStorage.getItem(`ires_ical_${currentEmail}`)) {
+                return localStorage.getItem(`ires_ical_${currentEmail}`);
+            }
+            return localStorage.getItem('ires_global_ical') || '';
         },
         set icalUrl(v) {
             if (currentEmail) localStorage.setItem(`ires_ical_${currentEmail}`, v);
+            localStorage.setItem('ires_global_ical', v);
         }
     };
 
@@ -401,19 +404,24 @@ function setQuickInput(text) {
     }
 
     /* ==========================================================================
-       GOOGLE KALENDER (iCal-Reader, nur lesend)
+       GOOGLE KALENDER (iCal-Reader, überarbeitete Version)
        ========================================================================== */
     async function fetchCalendarEvents() {
-        const url = store.icalUrl;
+        const url = store.icalUrl || (icalUrlInput ? icalUrlInput.value.trim() : '');
         if (!url) {
             return "Kein Google-Kalender-Link hinterlegt, Sir. Bitte fügen Sie ihn im Einstellungsmenü oben rechts ein.";
         }
         try {
-            // AllOrigins-Proxy wird nur genutzt, um CORS-Sperren beim Lesen zu umgehen — es wird nichts geschrieben.
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            // Umgehen der Browser CORS-Sperre
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
             const res = await fetch(proxyUrl);
             if (!res.ok) throw new Error();
-            const text = await res.text();
+            const data = await res.json();
+            const text = data.contents;
+
+            if (!text || !text.includes('BEGIN:VCALENDAR')) {
+                return "Der Kalender konnte nicht gelesen werden. Bitte prüfen Sie den iCal-Link im Einstellungsmenü.";
+            }
 
             const matches = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g);
             if (!matches || matches.length === 0) {
@@ -424,23 +432,24 @@ function setQuickInput(text) {
             matches.forEach(block => {
                 const summaryMatch = block.match(/SUMMARY:(.*)/);
                 const dtstartMatch = block.match(/DTSTART(?:;.*)?:(.*)/);
-                if (summaryMatch && dtstartMatch) {
-                    const title = summaryMatch[1].trim();
-                    const rawDate = dtstartMatch[1].trim();
-                    events.push({ title, rawDate });
+                if (summaryMatch) {
+                    const title = summaryMatch[1].replace('\r', '').trim();
+                    events.push(title);
                 }
             });
 
             if (events.length === 0) return "Keine anstehenden Termine gefunden, Sir.";
 
+            // Entferne Duplikate
+            const uniqueEvents = [...new Set(events)];
             let output = "Ihre nächsten Kalender-Einträge:\n";
-            events.slice(0, 5).forEach(ev => {
-                output += `• ${ev.title}\n`;
+            uniqueEvents.slice(0, 5).forEach(ev => {
+                output += `• ${ev}\n`;
             });
             return output;
 
         } catch (e) {
-            return "Fehler beim Abrufen des Kalenders. Bitte prüfen Sie den iCal-Link im Einstellungsmenü.";
+            return "Fehler beim Abrufen des Kalenders. Bitte stellen Sie sicher, dass der iCal-Link korrekt ist.";
         }
     }
 
@@ -474,10 +483,6 @@ function setQuickInput(text) {
         utter.onend = () => { stopWaveform(); setStatus('idle'); };
         utter.onerror = () => { stopWaveform(); setStatus('idle'); };
 
-        // FIX: speechSynthesis.cancel() gefolgt von einem sofortigen .speak() wird in
-        // Chrome/Edge oft stillschweigend verworfen (bekannter Browser-Bug). Ein winziger
-        // Delay zwischen cancel() und speak() behebt das zuverlässig — das war der Grund,
-        // warum I.R.E.S. Antworten manchmal nicht vorgelesen hat.
         speechSynthesis.cancel();
         setTimeout(() => speechSynthesis.speak(utter), 60);
     }
@@ -774,7 +779,8 @@ function setQuickInput(text) {
 
     /* Einstellungsmenü & Theme-Button Event-Handling */
     saveIcalBtn.addEventListener('click', () => {
-        store.icalUrl = icalUrlInput.value.trim();
+        const val = icalUrlInput.value.trim();
+        store.icalUrl = val;
         icalStatusMsg.textContent = 'iCal-Link gespeichert!';
         logActivity('Kalender-Link aktualisiert.');
         setTimeout(() => { icalStatusMsg.textContent = ''; }, 3000);
@@ -789,7 +795,6 @@ function setQuickInput(text) {
         if (themeClickTimer === null) {
             themeClickTimer = setTimeout(() => {
                 themeClickTimer = null;
-                // Einfacher Klick: Menü öffnen / schließen
                 settingsMenu.classList.toggle('hidden');
             }, 250);
         }
@@ -798,7 +803,6 @@ function setQuickInput(text) {
     themeToggle.addEventListener('dblclick', () => {
         clearTimeout(themeClickTimer);
         themeClickTimer = null;
-        // Doppelklick: Theme wechseln
         document.body.classList.toggle('theme-amber');
         store.theme = document.body.classList.contains('theme-amber') ? 'amber' : 'cyan';
     });
