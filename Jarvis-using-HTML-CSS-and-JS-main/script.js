@@ -95,7 +95,6 @@ function setQuickInput(text) {
         set memory(v) {
             if (currentUser) localStorage.setItem(`ires_memory_${currentUser}`, JSON.stringify(v));
         },
-        /* Kalender-Link: Prüft erst Mail-Zuordnung, sonst globalen Speicher */
         get icalUrl() {
             if (currentEmail && localStorage.getItem(`ires_ical_${currentEmail}`)) {
                 return localStorage.getItem(`ires_ical_${currentEmail}`);
@@ -113,7 +112,7 @@ function setQuickInput(text) {
     const bootTime = Date.now();
 
     /* ==========================================================================
-       AUTHENTIFIZIERUNG / POPUP-MODAL & 30-TAGE LOGIN
+       AUTHENTIFIZIERUNG / POPUP-MODAL
        ========================================================================== */
     function getUsersDB() {
         try { return JSON.parse(localStorage.getItem('ires_users_db') || '{}'); } catch { return {}; }
@@ -206,11 +205,11 @@ function setQuickInput(text) {
     }
 
     function showModal() {
-        authModal.classList.remove('hidden');
+        if (authModal) authModal.classList.remove('hidden');
     }
 
     function closeModal() {
-        authModal.classList.add('hidden');
+        if (authModal) authModal.classList.add('hidden');
         authUsernameInput.value = '';
         authPasswordInput.value = '';
         authEmailInput.value = '';
@@ -269,6 +268,11 @@ function setQuickInput(text) {
         setInterval(tickClock, 1000);
         setStatus('idle');
         initBattery();
+
+        // Einstellungsmenü beim Boot sicherheitshalber ausblenden
+        if (settingsMenu) {
+            settingsMenu.classList.add('hidden');
+        }
 
         if (currentUser && !checkSessionExpired()) {
             logActivity(`Benutzer '${currentUser}' authentifiziert.`);
@@ -404,18 +408,23 @@ function setQuickInput(text) {
     }
 
     /* ==========================================================================
-       GOOGLE KALENDER (iCal-Reader, überarbeitete Version)
+       GOOGLE KALENDER (Verbesserte Parsing-Logik)
        ========================================================================== */
     async function fetchCalendarEvents() {
-        const url = store.icalUrl || (icalUrlInput ? icalUrlInput.value.trim() : '');
-        if (!url) {
-            return "Kein Google-Kalender-Link hinterlegt, Sir. Bitte fügen Sie ihn im Einstellungsmenü oben rechts ein.";
+        const rawUrl = store.icalUrl || (icalUrlInput ? icalUrlInput.value.trim() : '');
+        if (!rawUrl) {
+            return "Kein Google-Kalender-Link hinterlegt, Sir. Bitte tragen Sie ihn im Einstellungsmenü oben rechts ein.";
         }
+
+        // Bereinigen des Links
+        const url = rawUrl.trim();
+
         try {
-            // Umgehen der Browser CORS-Sperre
+            // Nutzen eines stabilen CORS-Proxies
             const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
             const res = await fetch(proxyUrl);
-            if (!res.ok) throw new Error();
+            if (!res.ok) throw new Error("Netzwerkantwort war nicht OK");
+            
             const data = await res.json();
             const text = data.contents;
 
@@ -423,24 +432,32 @@ function setQuickInput(text) {
                 return "Der Kalender konnte nicht gelesen werden. Bitte prüfen Sie den iCal-Link im Einstellungsmenü.";
             }
 
-            const matches = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g);
-            if (!matches || matches.length === 0) {
+            // Erkennung von Terminen Blöcken
+            const eventBlocks = text.split('BEGIN:VEVENT');
+            if (eventBlocks.length <= 1) {
                 return "Ich konnte keine Termine in Ihrem Kalender finden, Sir.";
             }
 
             let events = [];
-            matches.forEach(block => {
+            
+            for (let i = 1; i < eventBlocks.length; i++) {
+                const block = eventBlocks[i];
                 const summaryMatch = block.match(/SUMMARY:(.*)/);
-                const dtstartMatch = block.match(/DTSTART(?:;.*)?:(.*)/);
+                
                 if (summaryMatch) {
-                    const title = summaryMatch[1].replace('\r', '').trim();
-                    events.push(title);
+                    let title = summaryMatch[1].replace('\r', '').trim();
+                    if (title) events.push(title);
+                } else {
+                    // Falls der Kalender auf "Nur verfügbar (keine Details)" gesetzt ist
+                    events.push("Belegter Termin (Keine Details freigegeben)");
                 }
-            });
+            }
 
-            if (events.length === 0) return "Keine anstehenden Termine gefunden, Sir.";
+            if (events.length === 0) {
+                return "Keine anstehenden Termine in den Kalenderdaten gefunden, Sir.";
+            }
 
-            // Entferne Duplikate
+            // Duplikate filtern
             const uniqueEvents = [...new Set(events)];
             let output = "Ihre nächsten Kalender-Einträge:\n";
             uniqueEvents.slice(0, 5).forEach(ev => {
@@ -449,7 +466,7 @@ function setQuickInput(text) {
             return output;
 
         } catch (e) {
-            return "Fehler beim Abrufen des Kalenders. Bitte stellen Sie sicher, dass der iCal-Link korrekt ist.";
+            return "Fehler beim Abrufen des Kalenders. Bitte vergewissern Sie sich, dass der iCal-Link korrekt abgespeichert ist.";
         }
     }
 
@@ -506,15 +523,19 @@ function setQuickInput(text) {
             handleSubmit();
         };
     } else {
-        micBtn.disabled = true;
-        micBtn.title = 'Spracheingabe wird nicht unterstützt.';
-        micBtn.style.opacity = 0.35;
+        if (micBtn) {
+            micBtn.disabled = true;
+            micBtn.title = 'Spracheingabe wird nicht unterstützt.';
+            micBtn.style.opacity = 0.35;
+        }
     }
 
-    micBtn.addEventListener('click', () => {
-        if (!recognizer) return;
-        if (isRecording) { recognizer.stop(); } else { try { recognizer.start(); } catch (_) { } }
-    });
+    if (micBtn) {
+        micBtn.addEventListener('click', () => {
+            if (!recognizer) return;
+            if (isRecording) { recognizer.stop(); } else { try { recognizer.start(); } catch (_) { } }
+        });
+    }
 
     /* ==========================================================================
        INTERFACE DRUCK & PARSER
@@ -561,7 +582,7 @@ function setQuickInput(text) {
 
     function scrollToBottom() {
         const wrap = document.getElementById('jarvis-output');
-        wrap.scrollTop = wrap.scrollHeight;
+        if (wrap) wrap.scrollTop = wrap.scrollHeight;
     }
 
     function escapeHtml(str) {
@@ -746,7 +767,7 @@ function setQuickInput(text) {
     ];
 
     /* ==========================================================================
-       EVENT LISTENER & INIT
+       EVENT LISTENER & MENÜ-STEUERUNG
        ========================================================================== */
     async function handleSubmit() {
         const raw = inputField.value.trim();
@@ -770,42 +791,57 @@ function setQuickInput(text) {
 
     window.handleSubmit = handleSubmit;
 
-    authSubmitBtn.addEventListener('click', handleAuthSubmit);
-    authToggleBtn.addEventListener('click', toggleAuthMode);
-    authPasswordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthSubmit(); });
+    if (authSubmitBtn) authSubmitBtn.addEventListener('click', handleAuthSubmit);
+    if (authToggleBtn) authToggleBtn.addEventListener('click', toggleAuthMode);
+    if (authPasswordInput) authPasswordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthSubmit(); });
 
-    sendBtn.addEventListener('click', handleSubmit);
-    inputField.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
+    if (sendBtn) sendBtn.addEventListener('click', handleSubmit);
+    if (inputField) inputField.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
 
-    /* Einstellungsmenü & Theme-Button Event-Handling */
-    saveIcalBtn.addEventListener('click', () => {
-        const val = icalUrlInput.value.trim();
-        store.icalUrl = val;
-        icalStatusMsg.textContent = 'iCal-Link gespeichert!';
-        logActivity('Kalender-Link aktualisiert.');
-        setTimeout(() => { icalStatusMsg.textContent = ''; }, 3000);
-    });
+    /* Kalender Speichern */
+    if (saveIcalBtn) {
+        saveIcalBtn.addEventListener('click', () => {
+            const val = icalUrlInput.value.trim();
+            store.icalUrl = val;
+            if (icalStatusMsg) {
+                icalStatusMsg.textContent = 'iCal-Link gespeichert!';
+                setTimeout(() => { icalStatusMsg.textContent = ''; }, 3000);
+            }
+            logActivity('Kalender-Link aktualisiert.');
+        });
+    }
 
-    closeMenuBtn.addEventListener('click', () => {
-        settingsMenu.classList.add('hidden');
-    });
+    /* KORREKTUR: Menü Schließen Button */
+    if (closeMenuBtn) {
+        closeMenuBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (settingsMenu) {
+                settingsMenu.classList.add('hidden');
+            }
+        });
+    }
 
+    /* KORREKTUR: Theme- / Einstellungen-Toggle Button */
     let themeClickTimer = null;
-    themeToggle.addEventListener('click', () => {
-        if (themeClickTimer === null) {
-            themeClickTimer = setTimeout(() => {
-                themeClickTimer = null;
-                settingsMenu.classList.toggle('hidden');
-            }, 250);
-        }
-    });
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            if (themeClickTimer === null) {
+                themeClickTimer = setTimeout(() => {
+                    themeClickTimer = null;
+                    if (settingsMenu) {
+                        settingsMenu.classList.toggle('hidden');
+                    }
+                }, 250);
+            }
+        });
 
-    themeToggle.addEventListener('dblclick', () => {
-        clearTimeout(themeClickTimer);
-        themeClickTimer = null;
-        document.body.classList.toggle('theme-amber');
-        store.theme = document.body.classList.contains('theme-amber') ? 'amber' : 'cyan';
-    });
+        themeToggle.addEventListener('dblclick', () => {
+            clearTimeout(themeClickTimer);
+            themeClickTimer = null;
+            document.body.classList.toggle('theme-amber');
+            store.theme = document.body.classList.contains('theme-amber') ? 'amber' : 'cyan';
+        });
+    }
 
     boot();
 })();
