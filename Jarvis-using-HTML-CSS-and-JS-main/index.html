@@ -3,155 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I.R.E.S. Interface</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <title>I.R.E.S. System</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- Backdrop Grid Background -->
-    <div id="grid-canvas"></div>
-
-    <!-- Main Shell -->
-    <div id="jarvis-shell">
-
-        <!-- Topbar Header -->
-        <header id="topbar">
-            <div class="brand">
-                <span class="brand-mark">I.R.E.S.</span>
-                <span class="brand-sub">INTELLIGENT RESPONSE SYSTEM</span>
-            </div>
-            <div class="status-cluster">
-                <div class="status-item">
-                    <span id="status-dot" class="status-dot"></span>
-                    <span id="status-label">OFFLINE</span>
-                </div>
-                <div class="status-item">
-                    <span id="clock">00:00:00</span>
-                </div>
-                <button id="theme-toggle" title="Klick: Menü | Doppelklick: Farbe">◐</button>
-            </div>
-        </header>
-
-        <!-- Settings / System Overlay Menu -->
-        <div id="settings-menu" class="hidden hud-panel">
-            <div class="panel-title">SYSTEM-EINSTELLUNGEN</div>
-            <div class="menu-content">
-                <div class="menu-section">
-                    <label for="ical-url-input"><strong>GOOGLE KALENDER (iCal-Link):</strong></label>
-                    <p class="menu-desc">Füge hier den geheimen iCal-Link deines Google Kalenders ein:</p>
-                    <input type="text" id="ical-url-input" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" autocomplete="off">
-                    <button type="button" id="save-ical-btn" class="quick-btn">Kalender-Link speichern</button>
-                    <span id="ical-status-msg" style="display:block; margin-top:5px; font-size:0.8em; color:var(--accent-color);"></span>
-                </div>
-                <hr style="border-color: rgba(0,240,255,0.2); margin: 15px 0;">
-                <button type="button" id="close-menu-btn" class="quick-btn" style="width:100%;">Menü schließen</button>
-            </div>
+    <!-- Header / Status-Leiste -->
+    <header id="top-bar">
+        <div class="brand">I.R.E.S.</div>
+        <div class="system-status">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="status-label">ONLINE</span>
         </div>
+        <div class="controls">
+            <button id="theme-toggle" title="Klick: Einstellungen | Doppelklick: Farbe wechseln">◐</button>
+            <div id="clock">00:00:00</div>
+        </div>
+    </header>
 
-        <!-- Main HUD Grid -->
-        <div id="main-grid">
-
-            <!-- Left Panel: Readouts -->
-            <aside class="hud-panel" id="panel-left">
-                <div class="panel-title">SYSTEM-STATUS</div>
-                <ul class="readout-list">
-                    <li><span>DATUM</span> <b id="readout-date">--.--.----</b></li>
-                    <li><span>UPTIME</span> <b id="readout-uptime">00:00:00</b></li>
-                    <li><span>AKKU</span> <b id="readout-battery">--%</b></li>
-                    <li><span>SPRACHAUSGABE</span> <b id="readout-voice">AN</b></li>
-                    <li><span>MIKROFON</span> <b id="readout-mic">INAKTIV</b></li>
-                </ul>
-
-                <div class="panel-title">SCHNELLBEFEHLE</div>
-                <div class="quick-grid">
-                    <button class="quick-btn" onclick="sendQuickCommand('Wie viel Uhr ist es?')">Uhrzeit</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Datum?')">Datum</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Was weißt du über mich?')">Erinnerung</button>
-                    <button class="quick-btn" onclick="setQuickInput('Notiz: ')">ToDo</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Wetter in Korbach')">Wetter</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Wie viel Akku habe ich noch?')">Akku</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Erzähl mir einen Witz')">Witz</button>
-                    <button class="quick-btn" onclick="sendQuickCommand('Hilfe!')">Hilfe</button>
-                </div>
-            </aside>
-
-            <!-- Center Panel: Core / Conversation -->
-            <main id="panel-center">
-                <div id="reactor-wrap">
-                    <div id="reactor">
-                        <div class="ring ring-1"></div>
-                        <div class="ring ring-2"></div>
-                        <div class="ring ring-3"></div>
-                        <div id="reactor-core"></div>
-                    </div>
-                    <div id="waveform">
-                        <span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                </div>
-
-                <div id="jarvis-output">
-                    <div id="output-area"></div>
-                </div>
-
-                <div id="jarvis-input">
-                    <button id="mic-btn" title="Spracheingabe starten">🎤</button>
-                    <input type="text" id="user-input" placeholder="Befehl oder Nachricht eingeben..." autocomplete="off">
-                    <button id="send-btn" title="Senden">➤</button>
-                </div>
-            </main>
-
-            <!-- Right Panel: Activity & Notes -->
-            <aside class="hud-panel" id="panel-right">
-                <div class="panel-title">AKTIVITÄTSPROTOKOLL</div>
-                <ul class="activity-list" id="activity-log">
-                    <li><b>SYSTEM</b> — System bereit.</li>
-                </ul>
-
-                <div class="panel-title">MEMO / NOTIZEN <span id="notes-count">(0)</span></div>
-                <ul class="notes-list" id="notes-list">
-                    <li class="notes-empty">Keine Notizen geladen.</li>
-                </ul>
-            </aside>
-
+    <!-- Einstellungen Modul (standardmäßig mit class 'hidden') -->
+    <div id="settings-menu" class="settings-card hidden">
+        <div class="settings-header">
+            <h3>EINSTELLUNGEN</h3>
+            <button id="close-menu-btn" type="button">✕ Schließen</button>
+        </div>
+        <div class="settings-body">
+            <label for="ical-url-input">Google Kalender iCal-Link:</label>
+            <input type="text" id="ical-url-input" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics">
+            <button id="save-ical-btn" type="button">Link speichern</button>
+            <span id="ical-status-msg"></span>
         </div>
     </div>
 
-    <!-- ============ AUTH MODAL (ANMELDUNG / REGISTRIERUNG) ============ -->
-    <div id="auth-modal" class="modal-overlay">
-        <div class="modal-content hud-panel">
-            <div class="panel-title" id="auth-title">SYSTEM-AUTHENTIFIZIERUNG</div>
-            <p class="auth-desc">Bitte identifizieren Sie sich, um auf das I.R.E.S.-Netzwerk zuzugreifen.</p>
-            
-            <form id="auth-form" onsubmit="return false;">
-                <div class="auth-field" id="email-field" style="display: none;">
-                    <label for="auth-email">E-MAIL-ADRESSE</label>
-                    <input type="email" id="auth-email" autocomplete="off" placeholder="name@beispiel.de">
-                </div>
-                <div class="auth-field">
-                    <label for="auth-username">BENUTZERNAME</label>
-                    <input type="text" id="auth-username" autocomplete="off" required placeholder="Name eingeben...">
-                </div>
-                <div class="auth-field">
-                    <label for="auth-password">PASSWORT</label>
-                    <input type="password" id="auth-password" required placeholder="••••••••">
-                </div>
+    <!-- Hauptbereich -->
+    <main id="main-container">
+        <!-- Reaktor & Waveform Visuelle Anzeige -->
+        <div id="visualizer-container">
+            <div id="reactor"></div>
+            <div id="waveform">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+        </div>
 
-                <div class="auth-field checkbox-field" id="remember-field" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="auth-remember" style="width: auto; cursor: pointer;">
-                    <label for="auth-remember" style="font-size: 0.85em; cursor: pointer; margin: 0;">30 Tage angemeldet bleiben</label>
-                </div>
+        <!-- Chat / Ausgabebereich -->
+        <div id="jarvis-output" class="output-container">
+            <div id="output-area"></div>
+        </div>
 
-                <div id="auth-error" class="auth-error-msg"></div>
-                
-                <div class="auth-actions">
-                    <button type="button" id="auth-submit-btn" class="auth-btn primary">ANMELDEN</button>
-                    <button type="button" id="auth-toggle-btn" class="auth-btn secondary">Neues Konto erstellen</button>
-                </div>
-            </form>
+        <!-- Eingabezeile -->
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Befehl eingeben oder 'Hilfe' schreiben..." autocomplete="off">
+            <button id="mic-btn" title="Spracheingabe">🎤</button>
+            <button id="send-btn">Senden</button>
+        </div>
+    </main>
+
+    <!-- Sidebar / System-Protokoll -->
+    <aside id="sidebar">
+        <div class="panel">
+            <h4>SYSTEM READOUT</h4>
+            <ul>
+                <li>Datum: <span id="readout-date">--.--.----</span></li>
+                <li>Uptime: <span id="readout-uptime">00:00:00</span></li>
+                <li>Akku: <span id="readout-battery">--%</span></li>
+                <li>Sprache: <span id="readout-voice">AN</span></li>
+                <li>Mikrofon: <span id="readout-mic">INAKTIV</span></li>
+            </ul>
+        </div>
+
+        <div class="panel">
+            <h4>MEMOS <span id="notes-count">(0)</span></h4>
+            <ul id="notes-list"></ul>
+        </div>
+
+        <div class="panel">
+            <h4>AKTIVITÄT</h4>
+            <ul id="activity-log"></ul>
+        </div>
+    </aside>
+
+    <!-- Login / Auth Modal -->
+    <div id="auth-modal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <h2 id="auth-title">SYSTEM-AUTHENTIFIZIERUNG</h2>
+            <div id="email-field" style="display: none;">
+                <label>E-Mail</label>
+                <input type="email" id="auth-email">
+            </div>
+            <div>
+                <label>Benutzername</label>
+                <input type="text" id="auth-username">
+            </div>
+            <div>
+                <label>Passwort</label>
+                <input type="password" id="auth-password">
+            </div>
+            <div class="remember-box">
+                <input type="checkbox" id="auth-remember">
+                <label for="auth-remember">30 Tage angemeldet bleiben</label>
+            </div>
+            <div id="auth-error" class="error-msg"></div>
+            <button id="auth-submit-btn">ANMELDEN</button>
+            <button id="auth-toggle-btn" class="btn-link">Neues Konto erstellen</button>
         </div>
     </div>
 
